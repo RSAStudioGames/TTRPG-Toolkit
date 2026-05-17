@@ -11,6 +11,7 @@ build/
 # Frontend
 frontend/node_modules/
 frontend/.svelte-kit/
+node_modules/
 
 # Embedded static
 backend/ui/static/*

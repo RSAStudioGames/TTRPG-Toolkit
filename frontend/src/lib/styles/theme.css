@@ -3,7 +3,16 @@
 	--text-ink: #111827;
 	--text-muted: #4a5568;
 	--card-surface: #ffffff;
+	--card-border-player: 2px solid #dc2626;
+	--card-border-gm: 2px solid #d4af37;
+	--card-border-hover-player: 2px solid #ef4444;
+	--card-border-hover-gm: 2px solid #f0c94a;
 	--shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
+	--shadow-card-hover-player: 0 12px 40px rgba(220, 38, 38, 0.18);
+	--shadow-card-hover-gm: 0 12px 40px rgba(212, 175, 55, 0.22);
+	--card-tint-player: linear-gradient(180deg, rgba(220, 38, 38, 0.06) 0%, #ffffff 45%);
+	--card-tint-gm: linear-gradient(180deg, rgba(212, 175, 55, 0.08) 0%, #ffffff 45%);
+	--transition-card: transform 0.2s ease, box-shadow 0.2s ease;
 	--accent-player: #dc2626;
 	--accent-gm: #d4af37;
 	--accent-gm-muted: #e9e5d1;
@@ -20,7 +29,7 @@ html,
 body {
 	margin: 0;
 	min-height: 100%;
-	font-family: 'Inter', system-ui, -apple-system, sans-serif;
+	font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
 	color: var(--text-ink);
 	background: var(--bg-paper);
 	background-image: radial-gradient(ellipse at center, #ffffff 0%, #f3f2ef 70%, #ebe8e3 100%);

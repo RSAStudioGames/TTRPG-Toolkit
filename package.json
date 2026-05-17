@@ -1,0 +1,10 @@
+{
+	"name": "ttrpg-toolkit",
+	"private": true,
+	"description": "Repo root helpers; SvelteKit app lives in frontend/. Runtime is the Go binary (see README).",
+	"scripts": {
+		"install:frontend": "npm ci --prefix frontend",
+		"check": "npm run check --prefix frontend",
+		"build:frontend": "npm run build --prefix frontend"
+	}
+}

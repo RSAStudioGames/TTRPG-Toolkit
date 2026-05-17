@@ -23,16 +23,17 @@ No Node at runtime. No `npm run dev`.
 | `TTRPG_SERVER_PORT` | `8080` | Fiber port (internal in Docker) |
 | `CADDY_PORT` | `80` | Host port mapped to Caddy |
 
-## Build
+## Build (prep for testing)
 
 ```bash
-go generate ./backend/ui/...    # when frontend changed
-go build -C backend -o ttrpg-toolkit ./cmd
+go run -C tools ./build
 ```
 
-`go generate` runs `tools/buildfrontend` (`npm run build` + copy into `backend/ui/static/` for `go:embed`).
+Or `.\prep.ps1` / `./prep.sh`. This runs `npm ci`, compiles the frontend, embeds static assets, and builds `ttrpg-toolkit` at the repo root.
 
 Restart the binary after rebuilding.
+
+Manual equivalent: `go generate ./backend/ui/...` then `go build -C backend -o ttrpg-toolkit ./cmd`.
 
 ## Docker Compose
 

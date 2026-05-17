@@ -1,10 +1,22 @@
-<button type="button" class="join-game-button">
+<script lang="ts">
+	import { motion } from '@humanspeak/svelte-motion';
+
+	const buttonTransition = { type: 'spring' as const, stiffness: 500, damping: 35 };
+</script>
+
+<motion.button
+	type="button"
+	class="join-game-button"
+	whileHover={{ filter: 'brightness(1.05)' }}
+	whileTap={{ scale: 0.98 }}
+	transition={buttonTransition}
+>
 	<i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
 	Join Game
-</button>
+</motion.button>
 
 <style>
-	.join-game-button {
+	:global(.join-game-button) {
 		display: flex;
 		width: 100%;
 		align-items: center;
@@ -17,11 +29,12 @@
 		color: #ffffff;
 		font-size: 1rem;
 		font-weight: 600;
+		font-family: inherit;
 		cursor: pointer;
 		transition: filter 0.15s ease;
 	}
 
-	.join-game-button:hover {
-		filter: brightness(1.05);
+	:global(.join-game-button:active) {
+		filter: brightness(0.95);
 	}
 </style>

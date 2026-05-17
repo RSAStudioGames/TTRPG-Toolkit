@@ -1,10 +1,22 @@
-<button type="button" class="gm-login-button">
+<script lang="ts">
+	import { motion } from '@humanspeak/svelte-motion';
+
+	const buttonTransition = { type: 'spring' as const, stiffness: 500, damping: 35 };
+</script>
+
+<motion.button
+	type="button"
+	class="gm-login-button"
+	whileHover={{ filter: 'brightness(0.97)' }}
+	whileTap={{ scale: 0.98 }}
+	transition={buttonTransition}
+>
 	<i class="fa-solid fa-key" aria-hidden="true"></i>
 	GM Login
-</button>
+</motion.button>
 
 <style>
-	.gm-login-button {
+	:global(.gm-login-button) {
 		display: flex;
 		width: 100%;
 		align-items: center;
@@ -17,11 +29,12 @@
 		color: var(--text-ink);
 		font-size: 1rem;
 		font-weight: 600;
+		font-family: inherit;
 		cursor: pointer;
 		transition: filter 0.15s ease;
 	}
 
-	.gm-login-button:hover {
-		filter: brightness(0.97);
+	:global(.gm-login-button:active) {
+		filter: brightness(0.92);
 	}
 </style>

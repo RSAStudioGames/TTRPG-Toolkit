@@ -6,7 +6,7 @@ A tabletop RPG companion app: **SvelteKit** UI embedded in a **Go (Fiber)** bina
 
 | Layer | Role |
 |-------|------|
-| **SvelteKit** | UI — compiled to static files and embedded in the Go binary |
+| **SvelteKit + TypeScript** | UI — strict TS, `lib/api` + `lib/types`, embedded in the Go binary |
 | **Go (Fiber)** | Serves `/`, embedded SPA, and `/api/*` on `TTRPG_SERVER_PORT` (default `8080`) |
 | **Caddy** | Reverse proxy on port `80` → Fiber (Docker Compose only) |
 
@@ -23,7 +23,8 @@ TTRPG-Toolkit/
 ├── backend/           # Go Fiber app (cmd/, internal/, ui/static embed)
 ├── deploy/            # Caddyfile configs
 ├── build/static/      # SvelteKit build output (generated)
-├── tools/buildfrontend/  # go generate helper
+├── tools/build/         # full prep tool (`go run -C tools ./build`)
+├── prep.ps1 / prep.sh   # shortcuts to the prep tool
 ├── ttrpg-toolkit      # compiled binary (repo root, gitignored)
 ├── .env               # local config (from .env.example)
 └── docker-compose.yml
@@ -37,15 +38,13 @@ TTRPG-Toolkit/
 
 ## Quick start
 
-```bash
-cp .env.example .env
-cd frontend && npm ci
-cd ../backend && go mod download
-cd ..
+One command prepares everything (deps, frontend build, embed, Go binary at repo root):
 
-go generate ./backend/ui/...
-go build -C backend -o ttrpg-toolkit ./cmd
+```bash
+go run -C tools ./build
 ```
+
+Windows: `.\prep.ps1` · macOS/Linux: `./prep.sh`
 
 Run from the **repository root**:
 
@@ -58,12 +57,13 @@ Open **http://localhost:8080** (or the port set in `.env`).
 
 ## Rebuilding
 
-| You changed | Before `go build` |
-|-------------|-------------------|
-| Svelte / `frontend/` | `go generate ./backend/ui/...` |
-| Go / `backend/` only | `go build -C backend -o ttrpg-toolkit ./cmd` |
+After any code change, run the prep tool again:
 
-`go generate` runs `npm run build` and copies assets into `backend/ui/static/` for `go:embed`. It is a **compile step**, not a dev server.
+```bash
+go run -C tools ./build
+```
+
+Manual steps (if you prefer): `go generate ./backend/ui/...` when only the UI changed, then `go build -C backend -o ttrpg-toolkit ./cmd`.
 
 **Do not use:** `npm run dev`, Makefile, or any Node HTTP server at runtime.
 
@@ -95,4 +95,5 @@ caddy run --config deploy/Caddyfile.local
 ## Documentation
 
 - [Development guide](docs/development.md) — architecture, rebuild workflow, Docker stages
+- [TypeScript guide](docs/typescript.md) — API client, types
 - [Rulebook reference](docs/rulebook-reference.md) — naming, API envelope, theming
