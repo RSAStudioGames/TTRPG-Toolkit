@@ -1,0 +1,41 @@
+:root {
+	--bg-paper: #fafafa;
+	--text-ink: #111827;
+	--text-muted: #4a5568;
+	--card-surface: #ffffff;
+	--shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
+	--accent-player: #dc2626;
+	--accent-gm: #d4af37;
+	--accent-gm-muted: #e9e5d1;
+	--accent-primary: var(--accent-player);
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	min-height: 100%;
+	font-family: 'Inter', system-ui, -apple-system, sans-serif;
+	color: var(--text-ink);
+	background: var(--bg-paper);
+	background-image: radial-gradient(ellipse at center, #ffffff 0%, #f3f2ef 70%, #ebe8e3 100%);
+}
+
+@keyframes dice-rotate {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.dice-spin {
+	display: inline-block;
+	animation: dice-rotate 5s linear infinite;
+}

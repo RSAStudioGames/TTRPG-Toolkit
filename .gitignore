@@ -1,0 +1,23 @@
+.cursor
+.git
+
+# Environment
+.env
+
+# Build artifacts
+build/
+
+# Frontend
+frontend/node_modules/
+frontend/.svelte-kit/
+
+# Embedded static (populated at build time; keep placeholder)
+backend/ui/static/*
+!backend/ui/static/index.html
+
+# Go
+backend/bin/
+
+# OS
+.DS_Store
+Thumbs.db
