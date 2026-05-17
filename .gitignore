@@ -1,5 +1,6 @@
 .cursor
 .git
+*.exe
 
 # Environment
 .env
@@ -11,7 +12,7 @@ build/
 frontend/node_modules/
 frontend/.svelte-kit/
 
-# Embedded static (populated at build time; keep placeholder)
+# Embedded static
 backend/ui/static/*
 !backend/ui/static/index.html
 

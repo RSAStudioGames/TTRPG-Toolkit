@@ -7,47 +7,36 @@ import (
 
 	"github.com/gabriel/ttrpg-toolkit/backend/internal/api"
 	"github.com/gabriel/ttrpg-toolkit/backend/ui"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/filesystem"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
-// New returns an HTTP handler for the application.
-func New() http.Handler {
-	mux := http.NewServeMux()
-	api.Register(mux)
+// New returns a configured Fiber application.
+func New() *fiber.App {
+	app := fiber.New(fiber.Config{
+		DisableStartupMessage: false,
+	})
+
+	app.Use(logger.New())
 
 	staticFS, err := fs.Sub(ui.Static, "static")
 	if err != nil {
 		panic("embedded static files: " + err.Error())
 	}
 
-	fileServer := http.FileServer(http.FS(staticFS))
+	api.Register(app)
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, "/api") {
-			http.NotFound(w, r)
-			return
-		}
+	// Embedded SvelteKit build: assets + SPA fallback to index.html.
+	app.Use("/", filesystem.New(filesystem.Config{
+		Root:         http.FS(staticFS),
+		Browse:       false,
+		Index:        "index.html",
+		NotFoundFile: "index.html",
+		Next: func(c *fiber.Ctx) bool {
+			return strings.HasPrefix(c.Path(), "/api")
+		},
+	}))
 
-		path := strings.TrimPrefix(r.URL.Path, "/")
-		if path == "" {
-			http.ServeFileFS(w, r, staticFS, "index.html")
-			return
-		}
-
-		clean := path
-		if strings.Contains(clean, "..") {
-			http.NotFound(w, r)
-			return
-		}
-
-		if f, err := staticFS.Open(clean); err == nil {
-			f.Close()
-			r.URL.Path = "/" + clean
-			fileServer.ServeHTTP(w, r)
-			return
-		}
-
-		http.ServeFileFS(w, r, staticFS, "index.html")
-	})
-
-	return mux
+	return app
 }

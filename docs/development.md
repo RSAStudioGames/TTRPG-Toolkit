@@ -1,61 +1,50 @@
 # Development Guide
 
-## First-time setup
+## Architecture
 
-```bash
-cp .env.example .env
-make install
-make build
+```
+Browser → Caddy (:80) → Go Fiber (:8080) → embedded SvelteKit static + /api/*
 ```
 
-## Environment variables
+- **Fiber** serves the embedded build and API. This is the only application process you compile.
+- **Caddy** is the public entrypoint in Docker Compose (TLS-ready, reverse proxy). It does not replace the Go binary.
 
-Copy `.env.example` to `.env` at the repo root. The Go backend loads this file on startup.
+## Runtime
+
+No Node at runtime. No `npm run dev`.
+
+## Environment
+
+`.env` at repo root (from `.env.example`):
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `TTRPG_SERVER_HOST` | `0.0.0.0` | HTTP bind address |
-| `TTRPG_SERVER_PORT` | `8080` | HTTP port |
+| `TTRPG_SERVER_HOST` | `0.0.0.0` | Fiber bind address |
+| `TTRPG_SERVER_PORT` | `8080` | Fiber port (internal in Docker) |
+| `CADDY_PORT` | `80` | Host port mapped to Caddy |
 
-OS environment variables override values from `.env` (useful in Docker/Kubernetes).
-
-## Development modes
-
-### Frontend only (HMR)
+## Build
 
 ```bash
-make dev-frontend
+go generate ./backend/ui/...    # when frontend changed
+go build -C backend -o ttrpg-toolkit ./cmd
 ```
 
-Open http://localhost:5173 for hot reload while editing Svelte files.
+`go generate` runs `tools/buildfrontend` (`npm run build` + copy into `backend/ui/static/` for `go:embed`).
 
-### Full stack (production-like)
+Restart the binary after rebuilding.
 
-```bash
-make build
-make run
-```
+## Docker Compose
 
-Open http://localhost:8080. Only the Go binary runs; no Node process.
+1. **frontend** stage: `npm run build`
+2. **backend** stage: embed static, `go build` Fiber binary
+3. **app** service: runs binary on 8080 (not published to host)
+4. **caddy** service: `deploy/Caddyfile` → `reverse_proxy app:8080`
 
-### Concurrent dev
+## Direct vs Caddy
 
-Run `make dev-frontend` in one terminal and `make run` in another to test API routes against the built UI.
-
-## Docker
-
-```bash
-cp .env.example .env
-docker compose up --build
-```
-
-## Makefile targets
-
-| Target | Description |
-|--------|-------------|
-| `install` | Install frontend deps and tidy Go modules |
-| `build-frontend` | Build SvelteKit static assets to `build/static/` |
-| `build-backend` | Copy static assets and compile Go binary |
-| `build` | Both build steps |
-| `run` | Build and run the Go server |
-| `dev-frontend` | SvelteKit dev server with HMR |
+| Mode | How |
+|------|-----|
+| Direct | Run `./ttrpg-toolkit` (repo root) → http://localhost:8080 |
+| Caddy (local) | Binary on 8080 + `caddy run --config deploy/Caddyfile.local` → http://localhost |
+| Caddy (Docker) | `docker compose up` → http://localhost |

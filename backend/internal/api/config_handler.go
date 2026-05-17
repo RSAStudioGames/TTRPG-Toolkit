@@ -1,6 +1,6 @@
 package api
 
-import "net/http"
+import "github.com/gofiber/fiber/v2"
 
 // ConfigData is exposed to the frontend at runtime.
 type ConfigData struct {
@@ -9,12 +9,8 @@ type ConfigData struct {
 }
 
 // ConfigHandler serves GET /api/config.
-func ConfigHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
-		return
-	}
-	WriteSuccess(w, ConfigData{
+func ConfigHandler(c *fiber.Ctx) error {
+	return WriteSuccess(c, ConfigData{
 		APIBaseURL: "/api",
 		WSURL:      "",
 	})

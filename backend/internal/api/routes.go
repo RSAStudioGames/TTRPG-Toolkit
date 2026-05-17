@@ -1,8 +1,8 @@
 package api
 
-import "net/http"
+import "github.com/gofiber/fiber/v2"
 
-// Register mounts API routes on the given mux.
-func Register(mux *http.ServeMux) {
-	mux.HandleFunc("/api/config", ConfigHandler)
+// Register mounts API routes on the Fiber app.
+func Register(app *fiber.App) {
+	app.Get("/api/config", ConfigHandler)
 }

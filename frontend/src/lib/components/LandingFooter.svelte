@@ -7,7 +7,6 @@
 	<nav class="footer-nav" aria-label="Footer">
 		<button type="button" class="footer-link">About</button>
 		<button type="button" class="footer-link">Help</button>
-		<button type="button" class="footer-link">Contact</button>
 	</nav>
 </footer>
 

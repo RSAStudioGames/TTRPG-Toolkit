@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"net/http"
 
 	"github.com/gabriel/ttrpg-toolkit/backend/internal/config"
 	"github.com/gabriel/ttrpg-toolkit/backend/internal/server"
@@ -15,10 +14,10 @@ func main() {
 	}
 
 	addr := cfg.Addr()
-	log.Printf("TTRPG Toolkit listening on http://%s", addr)
+	log.Printf("TTRPG Toolkit (Fiber) listening on http://%s", addr)
 
-	handler := server.New()
-	if err := http.ListenAndServe(addr, handler); err != nil {
+	app := server.New()
+	if err := app.Listen(addr); err != nil {
 		log.Fatalf("server: %v", err)
 	}
 }

@@ -4,8 +4,8 @@ This project follows the TTRPG Dashboard Developer Rulebook. Key points for cont
 
 ## Architecture
 
-- Monorepo: `frontend/` (SvelteKit) + `backend/` (Go)
-- Production: single Go binary serves static SPA on `/` and API on `/api/*`
+- Monorepo: `frontend/` (SvelteKit) + `backend/` (Go Fiber)
+- Production: Fiber binary embeds static SPA on `/`, API on `/api/*`; Caddy reverse-proxies public HTTP
 - No `npm` in production runtime
 
 ## Configuration

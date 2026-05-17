@@ -1,0 +1,4 @@
+# Public edge — proxies to the Go (Fiber) app on the internal network.
+:80 {
+	reverse_proxy app:8080
+}
