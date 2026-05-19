@@ -12,7 +12,7 @@
 	transition={buttonTransition}
 >
 	<i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
-	Join Game
+	Player Login
 </motion.button>
 
 <style>
@@ -26,7 +26,7 @@
 		border: none;
 		border-radius: 8px;
 		background: var(--accent-primary);
-		color: #ffffff;
+		color: var(--text-ink);
 		font-size: 1rem;
 		font-weight: 600;
 		font-family: inherit;

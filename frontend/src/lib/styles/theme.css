@@ -12,7 +12,7 @@
 	--shadow-card-hover-gm: 0 12px 40px rgba(212, 175, 55, 0.22);
 	--card-tint-player: linear-gradient(180deg, rgba(220, 38, 38, 0.06) 0%, #ffffff 45%);
 	--card-tint-gm: linear-gradient(180deg, rgba(212, 175, 55, 0.08) 0%, #ffffff 45%);
-	--transition-card: transform 0.2s ease, box-shadow 0.2s ease;
+	--transition-card: transform 0.12s ease-out, box-shadow 0.12s ease-out, border-color 0.12s ease-out;
 	--accent-player: #dc2626;
 	--accent-gm: #d4af37;
 	--accent-gm-muted: #e9e5d1;

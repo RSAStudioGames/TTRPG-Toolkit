@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { motion } from '@humanspeak/svelte-motion';
 	import type { Snippet } from 'svelte';
 
 	type Role = 'player' | 'gm';
@@ -20,25 +19,13 @@
 	const cardTint = $derived(
 		role === 'player' ? 'var(--card-tint-player)' : 'var(--card-tint-gm)'
 	);
-	const hoverShadow = $derived(
-		role === 'player' ? 'var(--shadow-card-hover-player)' : 'var(--shadow-card-hover-gm)'
-	);
-	const cardBorder = $derived(
-		role === 'player' ? 'var(--card-border-player)' : 'var(--card-border-gm)'
-	);
-	const cardBorderHover = $derived(
-		role === 'player' ? 'var(--card-border-hover-player)' : 'var(--card-border-hover-gm)'
-	);
-
-	const cardTransition = { type: 'spring' as const, stiffness: 400, damping: 30 };
 </script>
 
-<motion.article
+<article
 	class="role-card"
+	class:role-player={role === 'player'}
+	class:role-gm={role === 'gm'}
 	style="--accent-primary: {accentVar}; background: {cardTint}"
-	initial={{ y: 0, boxShadow: 'var(--shadow-card)', border: cardBorder }}
-	whileHover={{ y: -6, boxShadow: hoverShadow, border: cardBorderHover }}
-	transition={cardTransition}
 >
 	<div class="card-icon" aria-hidden="true">
 		<i class={iconClass}></i>
@@ -48,10 +35,10 @@
 	<div class="cta-slot">
 		{@render children()}
 	</div>
-</motion.article>
+</article>
 
 <style>
-	:global(.role-card) {
+	.role-card {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
@@ -61,9 +48,22 @@
 		max-width: 520px;
 		padding: 2rem;
 		border-radius: 12px;
+		border: 2px solid transparent;
 		box-shadow: var(--shadow-card);
 		text-align: center;
 		transition: var(--transition-card);
+	}
+
+	.role-card.role-player:hover {
+		transform: translateY(-6px);
+		border-color: #ef4444;
+		box-shadow: var(--shadow-card-hover-player);
+	}
+
+	.role-card.role-gm:hover {
+		transform: translateY(-6px);
+		border-color: #f0c94a;
+		box-shadow: var(--shadow-card-hover-gm);
 	}
 
 	.card-icon {

@@ -9,7 +9,7 @@
 	<title>Tabletop RPG Toolkit</title>
 	<meta
 		name="description"
-		content="Your ultimate companion for tabletop role-playing adventures"
+		content="Your companion for tabletop role-playing games"
 	/>
 </svelte:head>
 

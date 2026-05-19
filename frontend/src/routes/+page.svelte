@@ -10,7 +10,7 @@
 			<i class="fa-solid fa-dice-d20 dice-spin" aria-hidden="true"></i>
 			<h1>Tabletop RPG Toolkit</h1>
 		</div>
-		<p class="tagline">Your ultimate companion for tabletop role-playing adventures</p>
+		<p class="tagline">Your companion for tabletop role-playing games</p>
 	</header>
 
 	<main class="cards-row">
@@ -18,7 +18,6 @@
 			role="player"
 			iconClass="fa-solid fa-users"
 			title="Player"
-			description="Enter the game world and embark on epic adventures with your fellow players."
 		>
 			<JoinGameButton />
 		</LandingRoleCard>
@@ -27,7 +26,6 @@
 			role="gm"
 			iconClass="fa-solid fa-crown"
 			title="Game Master"
-			description="Take control as the Game Master and guide your players through incredible stories."
 		>
 			<GMLoginButton />
 		</LandingRoleCard>
