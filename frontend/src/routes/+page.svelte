@@ -18,6 +18,7 @@
 			role="player"
 			iconClass="fa-solid fa-users"
 			title="Player"
+			description="Join a Campaign and manage your Character."
 		>
 			<JoinGameButton />
 		</LandingRoleCard>
@@ -26,6 +27,7 @@
 			role="gm"
 			iconClass="fa-solid fa-crown"
 			title="Game Master"
+			description="Run Campaigns and build your tabletop system."
 		>
 			<GMLoginButton />
 		</LandingRoleCard>

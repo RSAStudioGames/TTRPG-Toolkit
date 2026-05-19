@@ -1,7 +1,12 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { motion } from '@humanspeak/svelte-motion';
 
 	const buttonTransition = { type: 'spring' as const, stiffness: 500, damping: 35 };
+
+	function handleClick() {
+		goto('/gm');
+	}
 </script>
 
 <motion.button
@@ -10,6 +15,7 @@
 	whileHover={{ filter: 'brightness(0.97)' }}
 	whileTap={{ scale: 0.98 }}
 	transition={buttonTransition}
+	onclick={handleClick}
 >
 	<i class="fa-solid fa-key" aria-hidden="true"></i>
 	GM Login

@@ -1,28 +1,22 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { motion } from '@humanspeak/svelte-motion';
 
 	const buttonTransition = { type: 'spring' as const, stiffness: 500, damping: 35 };
-
-	function handleClick() {
-		goto('/player');
-	}
 </script>
 
 <motion.button
 	type="button"
-	class="join-game-button"
+	class="placeholder-button"
 	whileHover={{ filter: 'brightness(1.05)' }}
 	whileTap={{ scale: 0.98 }}
 	transition={buttonTransition}
-	onclick={handleClick}
 >
-	<i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
-	Player Login
+	<i class="fas fa-arrow-right" aria-hidden="true"></i>
+	Placeholder
 </motion.button>
 
 <style>
-	:global(.join-game-button) {
+	:global(.placeholder-button) {
 		display: flex;
 		width: 100%;
 		align-items: center;
@@ -40,7 +34,7 @@
 		transition: filter 0.15s ease;
 	}
 
-	:global(.join-game-button:active) {
+	:global(.placeholder-button:active) {
 		filter: brightness(0.95);
 	}
 </style>
