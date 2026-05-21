@@ -16,8 +16,6 @@ node_modules/
 # Embedded static
 backend/ui/static/*
 !backend/ui/static/index.html
-/backend/ui/static
-/frontend/ui/static
 
 # Go
 backend/bin/
