@@ -67,8 +67,60 @@ func (r SaveResolutionConfigRequest) ToResolutionConfig() ResolutionConfig {
 	}
 }
 
+// XPTableEntry is one level/XP pair for level-based progression.
+type XPTableEntry struct {
+	Level      int `json:"level"`
+	XPRequired int `json:"xp_required"`
+}
+
+// CostTableEntry is one rating/cost pair for point-buy progression.
+type CostTableEntry struct {
+	Rating int `json:"rating"`
+	Cost   int `json:"cost"`
+}
+
+// LevelBasedConfig is configuration for level-based and milestone paradigms.
+type LevelBasedConfig struct {
+	MinLevel       int            `json:"min_level"`
+	MaxLevel       int            `json:"max_level"`
+	XPTable        []XPTableEntry `json:"xp_table,omitempty"`
+	AllowMilestone bool           `json:"allow_milestone"`
+}
+
+// PointBuyConfig is configuration for point-buy progression.
+type PointBuyConfig struct {
+	StartingPool int              `json:"starting_pool"`
+	CostTable    []CostTableEntry `json:"cost_table,omitempty"`
+}
+
 // ProgressionConfig maps to system_mechanics.progression_config.
-type ProgressionConfig struct{}
+type ProgressionConfig struct {
+	Paradigm   string           `json:"paradigm"`
+	LevelBased LevelBasedConfig `json:"level_based,omitempty"`
+	PointBuy   PointBuyConfig   `json:"point_buy,omitempty"`
+	GMApproval bool             `json:"gm_approval"`
+	AllowUndo  bool             `json:"allow_undo"`
+}
+
+// SaveProgressionConfigRequest is PUT /api/systems/{id}/mechanics/progression body.
+type SaveProgressionConfigRequest struct {
+	Paradigm   string           `json:"paradigm" validate:"required"`
+	LevelBased LevelBasedConfig `json:"level_based"`
+	PointBuy   PointBuyConfig   `json:"point_buy"`
+	GMApproval bool             `json:"gm_approval"`
+	AllowUndo  bool             `json:"allow_undo"`
+}
+
+// ToProgressionConfig converts the request DTO to ProgressionConfig for persistence.
+func (r SaveProgressionConfigRequest) ToProgressionConfig() ProgressionConfig {
+	return ProgressionConfig{
+		Paradigm:   r.Paradigm,
+		LevelBased: r.LevelBased,
+		PointBuy:   r.PointBuy,
+		GMApproval: r.GMApproval,
+		AllowUndo:  r.AllowUndo,
+	}
+}
 
 // ActionEconomyConfig maps to system_mechanics.action_economy_config.
 type ActionEconomyConfig struct{}
@@ -116,8 +168,20 @@ type SkillConfig struct {
 	SpecializationBonus   int              `json:"specialization_bonus,omitempty"`
 }
 
+// RecoveryScheduleEntry defines when and how a resource recovers.
+type RecoveryScheduleEntry struct {
+	Trigger    string `json:"trigger"`
+	Amount     string `json:"amount"`
+	Conditions string `json:"conditions,omitempty"`
+}
+
 // ResourceConfig maps to system_resources.config.
-type ResourceConfig struct{}
+type ResourceConfig struct {
+	CurrentMaxFormat  string                  `json:"current_max_format"`
+	MinVal            int                     `json:"min_val"`
+	MaxValFormula     string                  `json:"max_val_formula"`
+	RecoverySchedules []RecoveryScheduleEntry `json:"recovery_schedules,omitempty"`
+}
 
 // SystemMechanics is the 1:1 mechanics row per game system.
 type SystemMechanics struct {
@@ -281,9 +345,9 @@ type ListSkillsResponse struct {
 
 // CreateResourceRequest is POST /api/systems/{id}/resources body.
 type CreateResourceRequest struct {
-	Name      string         `json:"name"`
-	Type      string         `json:"type"`
-	Config    ResourceConfig `json:"config"`
+	Name      string         `json:"name" validate:"required"`
+	Type      string         `json:"type" validate:"required,oneof=pool slot_track counter currency custom"`
+	Config    ResourceConfig `json:"config" validate:"required"`
 	SortOrder int            `json:"sort_order"`
 }
 

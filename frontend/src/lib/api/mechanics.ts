@@ -2,13 +2,18 @@ import { apiEnvelope } from './client';
 import type {
 	AttributeResponse,
 	CreateAttributePayload,
+	CreateResourcePayload,
 	CreateSkillPayload,
 	ListAttributesResponse,
+	ListResourcesResponse,
 	ListSkillsResponse,
 	MechanicsResponse,
+	ProgressionConfig,
 	ResolutionConfig,
+	ResourceResponse,
 	SkillResponse,
 	UpdateAttributePayload,
+	UpdateResourcePayload,
 	UpdateSkillPayload,
 	ValidateFormulaResponse
 } from '$lib/types/mechanics';
@@ -106,4 +111,49 @@ export async function deleteSkill(systemId: string, skillId: string): Promise<vo
 	await apiEnvelope<{ deleted: string }>(`/api/systems/${systemId}/skills/${skillId}`, {
 		method: 'DELETE'
 	});
+}
+
+export async function saveProgressionConfig(
+	systemId: string,
+	body: ProgressionConfig
+): Promise<MechanicsResponse> {
+	return apiEnvelope<MechanicsResponse>(`/api/systems/${systemId}/mechanics/progression`, {
+		method: 'PUT',
+		body: JSON.stringify(body)
+	});
+}
+
+export async function listResources(systemId: string): Promise<ListResourcesResponse> {
+	return apiEnvelope<ListResourcesResponse>(`/api/systems/${systemId}/resources`);
+}
+
+export async function createResource(
+	systemId: string,
+	body: CreateResourcePayload
+): Promise<ResourceResponse> {
+	return apiEnvelope<ResourceResponse>(`/api/systems/${systemId}/resources`, {
+		method: 'POST',
+		body: JSON.stringify(body)
+	});
+}
+
+export async function updateResource(
+	systemId: string,
+	resourceId: string,
+	body: UpdateResourcePayload
+): Promise<ResourceResponse> {
+	return apiEnvelope<ResourceResponse>(
+		`/api/systems/${systemId}/resources/${resourceId}`,
+		{
+			method: 'PUT',
+			body: JSON.stringify(body)
+		}
+	);
+}
+
+export async function deleteResource(systemId: string, resourceId: string): Promise<void> {
+	await apiEnvelope<{ deleted: string }>(
+		`/api/systems/${systemId}/resources/${resourceId}`,
+		{ method: 'DELETE' }
+	);
 }

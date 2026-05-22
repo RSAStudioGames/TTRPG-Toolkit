@@ -20,6 +20,12 @@ var ErrInvalidAttribute = errors.New("invalid attribute")
 // ErrInvalidSkill indicates skill definition failed semantic validation.
 var ErrInvalidSkill = errors.New("invalid skill")
 
+// ErrInvalidProgression indicates progression config failed semantic validation.
+var ErrInvalidProgression = errors.New("invalid progression config")
+
+// ErrInvalidResource indicates resource definition failed semantic validation.
+var ErrInvalidResource = errors.New("invalid resource")
+
 // AttributeFormulaError is returned when an attribute formula fails parsing.
 type AttributeFormulaError struct {
 	Field  string

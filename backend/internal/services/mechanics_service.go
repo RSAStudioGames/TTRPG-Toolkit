@@ -59,6 +59,25 @@ func (svc *MechanicsService) SaveResolutionConfig(systemID string, cfg models.Re
 	return mechanicsRowToResponse(row)
 }
 
+func (svc *MechanicsService) SaveProgressionConfig(systemID string, cfg models.ProgressionConfig) (*models.MechanicsResponse, error) {
+	if err := svc.ensureSystemExists(systemID); err != nil {
+		return nil, err
+	}
+	sanitizeProgressionConfig(&cfg)
+	if err := validateProgressionConfig(&cfg); err != nil {
+		return nil, err
+	}
+	progJSON, err := models.MarshalConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	row, err := svc.repo.UpsertProgressionConfig(systemID, progJSON)
+	if err != nil {
+		return nil, err
+	}
+	return mechanicsRowToResponse(row)
+}
+
 func mechanicsRowToResponse(row *models.SystemMechanics) (*models.MechanicsResponse, error) {
 	if row == nil {
 		return nil, nil
@@ -385,6 +404,9 @@ func (svc *MechanicsService) DeleteSkill(systemID, skillID string) error {
 }
 
 func (svc *MechanicsService) ListResources(systemID string) (*models.ListResourcesResponse, error) {
+	if err := svc.ensureSystemExists(systemID); err != nil {
+		return nil, err
+	}
 	rows, err := svc.repo.ListResources(systemID)
 	if err != nil {
 		return nil, err
@@ -401,10 +423,25 @@ func (svc *MechanicsService) GetResource(systemID, resourceID string) (*models.R
 }
 
 func (svc *MechanicsService) CreateResource(systemID string, req models.CreateResourceRequest) (*models.ResourceResponse, error) {
-	cfg, _ := models.MarshalConfig(req.Config)
+	if err := svc.ensureSystemExists(systemID); err != nil {
+		return nil, err
+	}
+	name := strings.TrimSpace(req.Name)
+	if err := svc.ensureUniqueResourceName(systemID, name, ""); err != nil {
+		return nil, err
+	}
+	cfg := req.Config
+	sanitizeResourceConfig(&cfg)
+	if err := validateResourceConfig(&cfg); err != nil {
+		return nil, err
+	}
+	cfgJSON, err := models.MarshalConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
 	row := &models.SystemResource{
-		SystemID: systemID, Name: req.Name, Type: req.Type,
-		ConfigJSON: cfg, SortOrder: req.SortOrder,
+		SystemID: systemID, Name: name, Type: req.Type,
+		ConfigJSON: cfgJSON, SortOrder: req.SortOrder,
 	}
 	created, err := svc.repo.CreateResource(row)
 	if err != nil {
@@ -414,15 +451,49 @@ func (svc *MechanicsService) CreateResource(systemID string, req models.CreateRe
 }
 
 func (svc *MechanicsService) UpdateResource(systemID, resourceID string, req models.UpdateResourceRequest) (*models.ResourceResponse, error) {
-	_, err := svc.repo.GetResource(systemID, resourceID)
+	existing, err := svc.repo.GetResource(systemID, resourceID)
 	if err != nil {
 		return nil, err
 	}
-	_ = req
-	return nil, repository.ErrNotFound
+	row := *existing
+	if req.Name != nil {
+		row.Name = strings.TrimSpace(*req.Name)
+	}
+	if req.Type != nil {
+		row.Type = *req.Type
+	}
+	if req.SortOrder != nil {
+		row.SortOrder = *req.SortOrder
+	}
+	cfg, err := models.UnmarshalConfig[models.ResourceConfig](row.ConfigJSON)
+	if err != nil {
+		return nil, err
+	}
+	if req.Config != nil {
+		cfg = *req.Config
+	}
+	sanitizeResourceConfig(&cfg)
+	if err := validateResourceConfig(&cfg); err != nil {
+		return nil, err
+	}
+	if err := svc.ensureUniqueResourceName(systemID, row.Name, resourceID); err != nil {
+		return nil, err
+	}
+	row.ConfigJSON, err = models.MarshalConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	updated, err := svc.repo.UpdateResource(&row)
+	if err != nil {
+		return nil, err
+	}
+	return resourceRowToResponse(updated), nil
 }
 
 func (svc *MechanicsService) DeleteResource(systemID, resourceID string) error {
+	if _, err := svc.repo.GetResource(systemID, resourceID); err != nil {
+		return err
+	}
 	return svc.repo.DeleteResource(systemID, resourceID)
 }
 

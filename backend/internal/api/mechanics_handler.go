@@ -64,6 +64,10 @@ func (h *MechanicsHandler) mechanicsServiceError(c *fiber.Ctx, err error) error 
 		return WriteError(c, fiber.StatusBadRequest, err.Error(), []string{err.Error()})
 	case errors.Is(err, services.ErrInvalidSkill):
 		return WriteError(c, fiber.StatusBadRequest, err.Error(), []string{err.Error()})
+	case errors.Is(err, services.ErrInvalidProgression):
+		return WriteError(c, fiber.StatusBadRequest, err.Error(), []string{err.Error()})
+	case errors.Is(err, services.ErrInvalidResource):
+		return WriteError(c, fiber.StatusBadRequest, err.Error(), []string{err.Error()})
 	default:
 		if msg := err.Error(); msg != "" {
 			return WriteError(c, fiber.StatusBadRequest, msg, []string{msg})
@@ -99,6 +103,27 @@ func (h *MechanicsHandler) SaveResolutionConfig(c *fiber.Ctx) error {
 		return WriteError(c, fiber.StatusBadRequest, "Validation failed", errs)
 	}
 	resp, err := h.svc.SaveResolutionConfig(c.Params("id"), req.ToResolutionConfig())
+	if err != nil {
+		return h.mechanicsServiceError(c, err)
+	}
+	return WriteSuccess(c, resp)
+}
+
+func (h *MechanicsHandler) SaveProgressionConfig(c *fiber.Ctx) error {
+	if h.svc == nil {
+		return WriteError(c, fiber.StatusInternalServerError, "Mechanics unavailable", nil)
+	}
+	var req models.SaveProgressionConfigRequest
+	if err := c.BodyParser(&req); err != nil {
+		return WriteError(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+	if errs := ValidateStruct(req); len(errs) > 0 {
+		return WriteError(c, fiber.StatusBadRequest, "Validation failed", errs)
+	}
+	if !models.IsAllowedProgressionParadigm(req.Paradigm) {
+		return WriteError(c, fiber.StatusBadRequest, "Validation failed", []string{"invalid paradigm"})
+	}
+	resp, err := h.svc.SaveProgressionConfig(c.Params("id"), req.ToProgressionConfig())
 	if err != nil {
 		return h.mechanicsServiceError(c, err)
 	}
@@ -240,21 +265,66 @@ func (h *MechanicsHandler) DeleteSkill(c *fiber.Ctx) error {
 }
 
 func (h *MechanicsHandler) ListResources(c *fiber.Ctx) error {
-	return h.placeholder(c, "Resources")
+	if h.svc == nil {
+		return WriteError(c, fiber.StatusInternalServerError, "Mechanics unavailable", nil)
+	}
+	resp, err := h.svc.ListResources(c.Params("id"))
+	if err != nil {
+		return h.mechanicsServiceError(c, err)
+	}
+	return WriteSuccess(c, resp)
 }
 
 func (h *MechanicsHandler) CreateResource(c *fiber.Ctx) error {
-	return h.placeholder(c, "Resources")
+	if h.svc == nil {
+		return WriteError(c, fiber.StatusInternalServerError, "Mechanics unavailable", nil)
+	}
+	var req models.CreateResourceRequest
+	if err := c.BodyParser(&req); err != nil {
+		return WriteError(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+	if errs := ValidateStruct(req); len(errs) > 0 {
+		return WriteError(c, fiber.StatusBadRequest, "Validation failed", errs)
+	}
+	resp, err := h.svc.CreateResource(c.Params("id"), req)
+	if err != nil {
+		return h.mechanicsServiceError(c, err)
+	}
+	return WriteSuccess(c, resp)
 }
 
 func (h *MechanicsHandler) GetResource(c *fiber.Ctx) error {
-	return h.placeholder(c, "Resources")
+	if h.svc == nil {
+		return WriteError(c, fiber.StatusInternalServerError, "Mechanics unavailable", nil)
+	}
+	resp, err := h.svc.GetResource(c.Params("id"), c.Params("resourceId"))
+	if err != nil {
+		return h.mechanicsServiceError(c, err)
+	}
+	return WriteSuccess(c, resp)
 }
 
 func (h *MechanicsHandler) UpdateResource(c *fiber.Ctx) error {
-	return h.placeholder(c, "Resources")
+	if h.svc == nil {
+		return WriteError(c, fiber.StatusInternalServerError, "Mechanics unavailable", nil)
+	}
+	var req models.UpdateResourceRequest
+	if err := c.BodyParser(&req); err != nil {
+		return WriteError(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+	resp, err := h.svc.UpdateResource(c.Params("id"), c.Params("resourceId"), req)
+	if err != nil {
+		return h.mechanicsServiceError(c, err)
+	}
+	return WriteSuccess(c, resp)
 }
 
 func (h *MechanicsHandler) DeleteResource(c *fiber.Ctx) error {
-	return h.placeholder(c, "Resources")
+	if h.svc == nil {
+		return WriteError(c, fiber.StatusInternalServerError, "Mechanics unavailable", nil)
+	}
+	if err := h.svc.DeleteResource(c.Params("id"), c.Params("resourceId")); err != nil {
+		return h.mechanicsServiceError(c, err)
+	}
+	return WriteSuccess(c, map[string]string{"deleted": c.Params("resourceId")})
 }

@@ -66,6 +66,25 @@ RETURNING ` + mechanicsColumns
 	return &row, nil
 }
 
+// UpsertProgressionConfig inserts or updates progression_config for a system.
+func (r *MechanicsRepository) UpsertProgressionConfig(systemID string, progressionJSON json.RawMessage) (*models.SystemMechanics, error) {
+	if len(progressionJSON) == 0 {
+		progressionJSON = models.EmptyJSONObject()
+	}
+	var row models.SystemMechanics
+	q := `
+INSERT INTO system_mechanics (system_id, resolution_config, progression_config, action_economy_config)
+VALUES ($1, '{}', $2, '{}')
+ON CONFLICT (system_id) DO UPDATE
+  SET progression_config = EXCLUDED.progression_config
+RETURNING ` + mechanicsColumns
+	if err := r.db.Get(&row, q, systemID, progressionJSON); err != nil {
+		return nil, err
+	}
+	normalizeMechanicsJSON(&row)
+	return &row, nil
+}
+
 // UpsertMechanics creates or updates mechanics for a system.
 func (r *MechanicsRepository) UpsertMechanics(_ *models.SystemMechanics) (*models.SystemMechanics, error) {
 	return nil, ErrNotFound
@@ -283,30 +302,108 @@ func (r *MechanicsRepository) DeleteSkill(systemID, skillID string) error {
 	return nil
 }
 
+const resourceColumns = `id, system_id, name, type, config, sort_order`
+
+func normalizeResourceJSON(row *models.SystemResource) {
+	if len(row.ConfigJSON) == 0 {
+		row.ConfigJSON = models.EmptyJSONObject()
+	}
+}
+
 // ListResources returns resources for a system.
 func (r *MechanicsRepository) ListResources(systemID string) ([]models.SystemResource, error) {
-	_ = systemID
-	return []models.SystemResource{}, nil
+	var rows []models.SystemResource
+	q := `SELECT ` + resourceColumns + ` FROM system_resources WHERE system_id = $1 ORDER BY sort_order, name`
+	if err := r.db.Select(&rows, q, systemID); err != nil {
+		return nil, err
+	}
+	for i := range rows {
+		normalizeResourceJSON(&rows[i])
+	}
+	return rows, nil
 }
 
 // GetResource loads one resource by id.
 func (r *MechanicsRepository) GetResource(systemID, resourceID string) (*models.SystemResource, error) {
-	_, _ = systemID, resourceID
-	return nil, ErrNotFound
+	var row models.SystemResource
+	q := `SELECT ` + resourceColumns + ` FROM system_resources WHERE system_id = $1 AND id = $2`
+	if err := r.db.Get(&row, q, systemID, resourceID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	normalizeResourceJSON(&row)
+	return &row, nil
+}
+
+// ResourceNameExists reports whether another resource in the system has the same name (case-insensitive).
+func (r *MechanicsRepository) ResourceNameExists(systemID, name, excludeID string) (bool, error) {
+	var exists bool
+	q := `SELECT EXISTS(
+		SELECT 1 FROM system_resources
+		WHERE system_id = $1 AND lower(name) = lower($2) AND ($3 = '' OR id::text != $3)
+	)`
+	if err := r.db.Get(&exists, q, systemID, name, excludeID); err != nil {
+		return false, err
+	}
+	return exists, nil
 }
 
 // CreateResource inserts a new resource.
-func (r *MechanicsRepository) CreateResource(_ *models.SystemResource) (*models.SystemResource, error) {
-	return nil, ErrNotFound
+func (r *MechanicsRepository) CreateResource(row *models.SystemResource) (*models.SystemResource, error) {
+	if len(row.ConfigJSON) == 0 {
+		row.ConfigJSON = models.EmptyJSONObject()
+	}
+	var created models.SystemResource
+	q := `
+INSERT INTO system_resources (system_id, name, type, config, sort_order)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING ` + resourceColumns
+	if err := r.db.Get(&created, q,
+		row.SystemID, row.Name, row.Type, row.ConfigJSON, row.SortOrder,
+	); err != nil {
+		return nil, err
+	}
+	normalizeResourceJSON(&created)
+	return &created, nil
 }
 
 // UpdateResource updates an existing resource.
-func (r *MechanicsRepository) UpdateResource(_ *models.SystemResource) (*models.SystemResource, error) {
-	return nil, ErrNotFound
+func (r *MechanicsRepository) UpdateResource(row *models.SystemResource) (*models.SystemResource, error) {
+	if len(row.ConfigJSON) == 0 {
+		row.ConfigJSON = models.EmptyJSONObject()
+	}
+	var updated models.SystemResource
+	q := `
+UPDATE system_resources
+SET name = $3, type = $4, config = $5, sort_order = $6
+WHERE system_id = $1 AND id = $2
+RETURNING ` + resourceColumns
+	if err := r.db.Get(&updated, q,
+		row.SystemID, row.ID, row.Name, row.Type, row.ConfigJSON, row.SortOrder,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	normalizeResourceJSON(&updated)
+	return &updated, nil
 }
 
 // DeleteResource removes a resource.
 func (r *MechanicsRepository) DeleteResource(systemID, resourceID string) error {
-	_, _ = systemID, resourceID
-	return ErrNotFound
+	res, err := r.db.Exec(`DELETE FROM system_resources WHERE system_id = $1 AND id = $2`, systemID, resourceID)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
 }

@@ -7,6 +7,8 @@
 	import SystemSaveTemplateModal from './SystemSaveTemplateModal.svelte';
 	import TE_AttributesTab from './TE_AttributesTab.svelte';
 	import TE_ResolutionTab from './TE_ResolutionTab.svelte';
+	import TE_ProgressionTab from './TE_ProgressionTab.svelte';
+	import TE_ResourcesTab from './TE_ResourcesTab.svelte';
 	import TE_SkillsTab from './TE_SkillsTab.svelte';
 	import {
 		archiveSystem,
@@ -57,8 +59,6 @@
 	type OverlayTabId = (typeof OVERLAY_TABS)[number]['id'];
 
 	const TAB_PLACEHOLDERS: Partial<Record<OverlayTabId, string>> = {
-		progression: 'Coming in Step 9.',
-		resources: 'Coming in Step 9.',
 		action_economy: 'Coming in Step 10.'
 	};
 
@@ -260,6 +260,10 @@
 				<TE_AttributesTab systemId={system.id} disabled={readOnly} />
 			{:else if activeTab === 'skills'}
 				<TE_SkillsTab systemId={system.id} disabled={readOnly} />
+			{:else if activeTab === 'progression'}
+				<TE_ProgressionTab systemId={system.id} disabled={readOnly} />
+			{:else if activeTab === 'resources'}
+				<TE_ResourcesTab systemId={system.id} disabled={readOnly} />
 			{:else if activePlaceholder}
 				<p class="tab-placeholder">{activePlaceholder}</p>
 			{/if}

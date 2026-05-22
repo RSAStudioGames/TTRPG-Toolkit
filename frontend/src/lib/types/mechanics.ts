@@ -37,12 +37,42 @@ export interface ResolutionConfig {
 	advantage_disadvantage: AdvantageDisadvantageEntry[];
 }
 
+export interface XPTableEntry {
+	level: number;
+	xp_required: number;
+}
+
+export interface CostTableEntry {
+	rating: number;
+	cost: number;
+}
+
+export interface LevelBasedConfig {
+	min_level: number;
+	max_level: number;
+	xp_table?: XPTableEntry[];
+	allow_milestone: boolean;
+}
+
+export interface PointBuyConfig {
+	starting_pool: number;
+	cost_table?: CostTableEntry[];
+}
+
+export interface ProgressionConfig {
+	paradigm: string;
+	level_based?: LevelBasedConfig;
+	point_buy?: PointBuyConfig;
+	gm_approval: boolean;
+	allow_undo: boolean;
+}
+
 /** GET /api/systems/{id}/mechanics success data */
 export interface MechanicsResponse {
 	id: string;
 	system_id: string;
 	resolution_config: ResolutionConfig;
-	progression_config: Record<string, unknown>;
+	progression_config: ProgressionConfig;
 	action_economy_config: Record<string, unknown>;
 }
 
@@ -147,5 +177,45 @@ export interface UpdateSkillPayload {
 	type?: string;
 	category?: string | null;
 	config?: SkillConfig;
+	sort_order?: number;
+}
+
+export interface RecoveryScheduleEntry {
+	trigger: string;
+	amount: string;
+	conditions?: string;
+}
+
+export interface ResourceConfig {
+	current_max_format: string;
+	min_val: number;
+	max_val_formula: string;
+	recovery_schedules?: RecoveryScheduleEntry[];
+}
+
+export interface ResourceResponse {
+	id: string;
+	system_id: string;
+	name: string;
+	type: string;
+	config: ResourceConfig;
+	sort_order: number;
+}
+
+export interface ListResourcesResponse {
+	items: ResourceResponse[];
+}
+
+export interface CreateResourcePayload {
+	name: string;
+	type: string;
+	config: ResourceConfig;
+	sort_order: number;
+}
+
+export interface UpdateResourcePayload {
+	name?: string;
+	type?: string;
+	config?: ResourceConfig;
 	sort_order?: number;
 }

@@ -28,6 +28,7 @@ func Register(app *fiber.App, deps Deps) {
 			mh := NewMechanicsHandler(deps.Mechanics, deps.Formula)
 			systems.Post("/:id/validate-formula", mh.ValidateFormula)
 			systems.Put("/:id/mechanics/resolution", mh.SaveResolutionConfig)
+			systems.Put("/:id/mechanics/progression", mh.SaveProgressionConfig)
 			systems.Get("/:id/mechanics", mh.GetMechanics)
 			systems.Put("/:id/mechanics", mh.UpsertMechanics)
 			systems.Get("/:id/attributes", mh.ListAttributes)
