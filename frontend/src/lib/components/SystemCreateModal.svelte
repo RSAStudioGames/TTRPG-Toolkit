@@ -22,6 +22,26 @@
 	let iconFile = $state<File | null>(null);
 	let coverFile = $state<File | null>(null);
 	let importError = $state<string | null>(null);
+	let discardConfirmOpen = $state(false);
+
+	function isFormDirty(): boolean {
+		if (iconFile || coverFile) return true;
+		return JSON.stringify(form) !== JSON.stringify(defaultFormValues());
+	}
+
+	function requestClose() {
+		if (isFormDirty()) {
+			discardConfirmOpen = true;
+			return;
+		}
+		confirmClose();
+	}
+
+	function confirmClose() {
+		discardConfirmOpen = false;
+		reset();
+		onclose();
+	}
 
 	function reset() {
 		form = defaultFormValues();
@@ -48,8 +68,7 @@
 			if (iconFile) created = await uploadSystemImage(created.id, 'icon', iconFile);
 			if (coverFile) created = await uploadSystemImage(created.id, 'cover', coverFile);
 			upsertSystem(created);
-			reset();
-			onclose();
+			confirmClose();
 			onsaved?.();
 		} catch (e) {
 			error = e instanceof ApiError ? e.message : 'Failed to create system';
@@ -66,8 +85,7 @@
 		try {
 			const s = await importSystem(file);
 			upsertSystem(s);
-			reset();
-			onclose();
+			confirmClose();
 			onsaved?.();
 		} catch (err) {
 			importError = err instanceof ApiError ? err.message : 'Failed to import Template';
@@ -76,7 +94,13 @@
 	}
 </script>
 
-<BaseModal {open} title="Create Game System" onclose={() => { reset(); onclose(); }}>
+<BaseModal
+	{open}
+	title="Create Game System"
+	closeOnBackdrop={false}
+	closeOnEscape={!discardConfirmOpen}
+	onclose={requestClose}
+>
 	<div class="import-zone">
 		<span class="import-label">Import from JSON</span>
 		<label class="file-picker">
@@ -115,14 +139,46 @@
 	{/if}
 
 	{#snippet footer()}
-		<button type="button" class="btn-secondary" onclick={() => { reset(); onclose(); }}>Cancel</button>
+		<button type="button" class="btn-secondary" onclick={requestClose}>Cancel</button>
 		<button type="button" class="btn-primary" disabled={saving} onclick={handleSave}>
 			{saving ? 'Creating…' : 'Create'}
 		</button>
 	{/snippet}
 </BaseModal>
 
+<BaseModal
+	open={discardConfirmOpen}
+	title="Discard changes?"
+	stacked
+	closeOnBackdrop={false}
+	onclose={() => (discardConfirmOpen = false)}
+>
+	<p class="discard-msg">Are you sure? Any information you entered will be lost.</p>
+	{#snippet footer()}
+		<button type="button" class="btn-secondary" onclick={() => (discardConfirmOpen = false)}>
+			Keep editing
+		</button>
+		<button type="button" class="btn-danger" onclick={confirmClose}>Discard</button>
+	{/snippet}
+</BaseModal>
+
 <style>
+	.discard-msg {
+		margin: 0;
+		font-size: 0.95rem;
+		line-height: 1.5;
+	}
+
+	.btn-danger {
+		padding: 0.5rem 1rem;
+		border-radius: 6px;
+		font: inherit;
+		font-weight: 600;
+		cursor: pointer;
+		border: 1px solid #fca5a5;
+		background: #fef2f2;
+		color: #b91c1c;
+	}
 	.btn-primary,
 	.btn-secondary {
 		padding: 0.5rem 1rem;
