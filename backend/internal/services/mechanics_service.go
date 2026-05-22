@@ -1,23 +1,138 @@
 package services
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/gabriel/ttrpg-toolkit/backend/internal/models"
 	"github.com/gabriel/ttrpg-toolkit/backend/internal/repository"
 )
 
 // MechanicsService handles game system mechanical framework logic.
 type MechanicsService struct {
-	repo *repository.MechanicsRepository
+	repo        *repository.MechanicsRepository
+	systems     *repository.SystemRepository
+	formula     *FormulaService
 }
 
 // NewMechanicsService returns a mechanics service.
-func NewMechanicsService(repo *repository.MechanicsRepository) *MechanicsService {
-	return &MechanicsService{repo: repo}
+func NewMechanicsService(
+	repo *repository.MechanicsRepository,
+	systems *repository.SystemRepository,
+	formula *FormulaService,
+) *MechanicsService {
+	return &MechanicsService{repo: repo, systems: systems, formula: formula}
 }
 
 func (svc *MechanicsService) GetMechanics(systemID string) (*models.MechanicsResponse, error) {
-	_, err := svc.repo.GetMechanicsBySystemID(systemID)
-	return nil, err
+	row, err := svc.repo.GetMechanicsBySystemID(systemID)
+	if err != nil {
+		return nil, err
+	}
+	return mechanicsRowToResponse(row)
+}
+
+func (svc *MechanicsService) SaveResolutionConfig(systemID string, cfg models.ResolutionConfig) (*models.MechanicsResponse, error) {
+	if svc.systems != nil {
+		if _, err := svc.systems.GetByID(systemID); err != nil {
+			return nil, err
+		}
+	}
+	if err := validateResolutionConfig(&cfg); err != nil {
+		return nil, err
+	}
+	sanitizeResolutionConfig(&cfg)
+	if svc.formula != nil {
+		valid, errs := svc.formula.ValidateFormula(cfg.RollExpression)
+		if !valid {
+			return nil, &InvalidFormulaError{Errors: errs}
+		}
+	}
+	resJSON, err := models.MarshalConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	row, err := svc.repo.UpsertResolutionConfig(systemID, resJSON)
+	if err != nil {
+		return nil, err
+	}
+	return mechanicsRowToResponse(row)
+}
+
+func mechanicsRowToResponse(row *models.SystemMechanics) (*models.MechanicsResponse, error) {
+	if row == nil {
+		return nil, nil
+	}
+	res, err := models.UnmarshalConfig[models.ResolutionConfig](row.ResolutionConfigJSON)
+	if err != nil {
+		return nil, err
+	}
+	prog, err := models.UnmarshalConfig[models.ProgressionConfig](row.ProgressionConfigJSON)
+	if err != nil {
+		return nil, err
+	}
+	action, err := models.UnmarshalConfig[models.ActionEconomyConfig](row.ActionEconomyConfigJSON)
+	if err != nil {
+		return nil, err
+	}
+	return &models.MechanicsResponse{
+		ID:                  row.ID,
+		SystemID:            row.SystemID,
+		ResolutionConfig:    res,
+		ProgressionConfig:   prog,
+		ActionEconomyConfig: action,
+	}, nil
+}
+
+func validateResolutionConfig(cfg *models.ResolutionConfig) error {
+	if cfg == nil {
+		return fmt.Errorf("%w: config is required", ErrInvalidResolution)
+	}
+	if !models.IsAllowedResolutionType(cfg.ResolutionType) {
+		return fmt.Errorf("%w: invalid resolution_type", ErrInvalidResolution)
+	}
+	if cfg.ResolutionType == models.ResolutionTypeCustom && strings.TrimSpace(cfg.CustomParadigmName) == "" {
+		return fmt.Errorf("%w: custom_paradigm_name is required when resolution_type is custom", ErrInvalidResolution)
+	}
+	sd := cfg.SuccessDetermination
+	if !models.IsAllowedSuccessMethod(sd.Method) {
+		return fmt.Errorf("%w: invalid success_determination.method", ErrInvalidResolution)
+	}
+	if sd.Method == models.SuccessMethodSuccessThresholdLadder {
+		if len(sd.ThresholdLadder) == 0 {
+			return fmt.Errorf("%w: threshold_ladder is required when method is success_threshold_ladder", ErrInvalidResolution)
+		}
+	}
+	for i, tier := range sd.ThresholdLadder {
+		if tier.Operator != "" && !models.IsAllowedLadderOperator(tier.Operator) {
+			return fmt.Errorf("%w: invalid threshold_ladder[%d].operator", ErrInvalidResolution, i)
+		}
+	}
+	cm := cfg.CriticalMechanics
+	if cm.EnableCritSuccess && strings.TrimSpace(cm.CritSuccessTrigger) == "" {
+		return fmt.Errorf("%w: crit_success_trigger is required when enable_crit_success is true", ErrInvalidResolution)
+	}
+	if cm.EnableCritFailure && strings.TrimSpace(cm.CritFailureTrigger) == "" {
+		return fmt.Errorf("%w: crit_failure_trigger is required when enable_crit_failure is true", ErrInvalidResolution)
+	}
+	for i, entry := range cfg.AdvantageDisadvantage {
+		if strings.TrimSpace(entry.Name) == "" {
+			return fmt.Errorf("%w: advantage_disadvantage[%d].name is required", ErrInvalidResolution, i)
+		}
+		if !models.IsAllowedMechanicType(entry.MechanicType) {
+			return fmt.Errorf("%w: invalid advantage_disadvantage[%d].mechanic_type", ErrInvalidResolution, i)
+		}
+	}
+	return nil
+}
+
+func sanitizeResolutionConfig(cfg *models.ResolutionConfig) {
+	if cfg == nil {
+		return
+	}
+	if cfg.ResolutionType != models.ResolutionTypeCustom {
+		cfg.CustomParadigmName = ""
+	}
 }
 
 func (svc *MechanicsService) UpsertMechanics(systemID string, req models.UpsertMechanicsRequest) (*models.MechanicsResponse, error) {
@@ -35,6 +150,9 @@ func (svc *MechanicsService) UpsertMechanics(systemID string, req models.UpsertM
 }
 
 func (svc *MechanicsService) ListAttributes(systemID string) (*models.ListAttributesResponse, error) {
+	if err := svc.ensureSystemExists(systemID); err != nil {
+		return nil, err
+	}
 	rows, err := svc.repo.ListAttributes(systemID)
 	if err != nil {
 		return nil, err
@@ -51,10 +169,35 @@ func (svc *MechanicsService) GetAttribute(systemID, attrID string) (*models.Attr
 }
 
 func (svc *MechanicsService) CreateAttribute(systemID string, req models.CreateAttributeRequest) (*models.AttributeResponse, error) {
-	cfg, _ := models.MarshalConfig(req.Config)
+	if err := svc.ensureSystemExists(systemID); err != nil {
+		return nil, err
+	}
+	if err := svc.ensureUniqueAttributeName(systemID, req.Name, ""); err != nil {
+		return nil, err
+	}
+	cfg := req.Config
+	sanitizeAttributeConfig(&cfg)
+	if err := validateAttributeConfig(req.Type, &cfg); err != nil {
+		return nil, err
+	}
+	if err := svc.validateAttributeFormulas(&cfg); err != nil {
+		return nil, err
+	}
+	if err := svc.validateParentAttribute(systemID, "", req.ParentAttributeID); err != nil {
+		return nil, err
+	}
+	cfgJSON, err := models.MarshalConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
 	row := &models.SystemAttribute{
-		SystemID: systemID, GroupName: req.GroupName, Name: req.Name,
-		Type: req.Type, ConfigJSON: cfg, SortOrder: req.SortOrder,
+		SystemID:          systemID,
+		GroupName:         req.GroupName,
+		ParentAttributeID: normalizeParentID(req.ParentAttributeID),
+		Name:              req.Name,
+		Type:              req.Type,
+		ConfigJSON:        cfgJSON,
+		SortOrder:         req.SortOrder,
 	}
 	created, err := svc.repo.CreateAttribute(row)
 	if err != nil {
@@ -64,16 +207,73 @@ func (svc *MechanicsService) CreateAttribute(systemID string, req models.CreateA
 }
 
 func (svc *MechanicsService) UpdateAttribute(systemID, attrID string, req models.UpdateAttributeRequest) (*models.AttributeResponse, error) {
-	_, err := svc.repo.GetAttribute(systemID, attrID)
+	existing, err := svc.repo.GetAttribute(systemID, attrID)
 	if err != nil {
 		return nil, err
 	}
-	_ = req
-	return nil, repository.ErrNotFound
+	row := *existing
+	if req.GroupName != nil {
+		row.GroupName = req.GroupName
+	}
+	if req.ParentAttributeID != nil {
+		row.ParentAttributeID = normalizeParentID(req.ParentAttributeID)
+	}
+	if req.Name != nil {
+		row.Name = *req.Name
+	}
+	if req.Type != nil {
+		row.Type = *req.Type
+	}
+	if req.SortOrder != nil {
+		row.SortOrder = *req.SortOrder
+	}
+	cfg, err := models.UnmarshalConfig[models.AttributeConfig](row.ConfigJSON)
+	if err != nil {
+		return nil, err
+	}
+	if req.Config != nil {
+		cfg = *req.Config
+	}
+	sanitizeAttributeConfig(&cfg)
+	if err := validateAttributeConfig(row.Type, &cfg); err != nil {
+		return nil, err
+	}
+	if err := svc.validateAttributeFormulas(&cfg); err != nil {
+		return nil, err
+	}
+	if err := svc.validateParentAttribute(systemID, attrID, row.ParentAttributeID); err != nil {
+		return nil, err
+	}
+	if err := svc.ensureUniqueAttributeName(systemID, row.Name, attrID); err != nil {
+		return nil, err
+	}
+	row.ConfigJSON, err = models.MarshalConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	updated, err := svc.repo.UpdateAttribute(&row)
+	if err != nil {
+		return nil, err
+	}
+	return attributeRowToResponse(updated), nil
 }
 
 func (svc *MechanicsService) DeleteAttribute(systemID, attrID string) error {
+	if _, err := svc.repo.GetAttribute(systemID, attrID); err != nil {
+		return err
+	}
 	return svc.repo.DeleteAttribute(systemID, attrID)
+}
+
+func normalizeParentID(id *string) *string {
+	if id == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*id)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
 }
 
 func (svc *MechanicsService) ListSkills(systemID string) (*models.ListSkillsResponse, error) {
@@ -93,10 +293,33 @@ func (svc *MechanicsService) GetSkill(systemID, skillID string) (*models.SkillRe
 }
 
 func (svc *MechanicsService) CreateSkill(systemID string, req models.CreateSkillRequest) (*models.SkillResponse, error) {
-	cfg, _ := models.MarshalConfig(req.Config)
+	if err := svc.ensureSystemExists(systemID); err != nil {
+		return nil, err
+	}
+	name := strings.TrimSpace(req.Name)
+	if err := svc.ensureUniqueSkillName(systemID, name, ""); err != nil {
+		return nil, err
+	}
+	cfg := req.Config
+	sanitizeSkillConfig(req.Type, &cfg)
+	if err := validateSkillConfig(req.Type, &cfg); err != nil {
+		return nil, err
+	}
+	if err := svc.validateLinkedAttribute(systemID, req.LinkedAttributeID); err != nil {
+		return nil, err
+	}
+	cfgJSON, err := models.MarshalConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
 	row := &models.SystemSkill{
-		SystemID: systemID, Name: req.Name, LinkedAttributeID: req.LinkedAttributeID,
-		Type: req.Type, Category: req.Category, ConfigJSON: cfg, SortOrder: req.SortOrder,
+		SystemID:          systemID,
+		Name:              name,
+		LinkedAttributeID: normalizeParentID(req.LinkedAttributeID),
+		Type:              req.Type,
+		Category:          req.Category,
+		ConfigJSON:        cfgJSON,
+		SortOrder:         req.SortOrder,
 	}
 	created, err := svc.repo.CreateSkill(row)
 	if err != nil {
@@ -106,15 +329,58 @@ func (svc *MechanicsService) CreateSkill(systemID string, req models.CreateSkill
 }
 
 func (svc *MechanicsService) UpdateSkill(systemID, skillID string, req models.UpdateSkillRequest) (*models.SkillResponse, error) {
-	_, err := svc.repo.GetSkill(systemID, skillID)
+	existing, err := svc.repo.GetSkill(systemID, skillID)
 	if err != nil {
 		return nil, err
 	}
-	_ = req
-	return nil, repository.ErrNotFound
+	row := *existing
+	if req.Name != nil {
+		row.Name = strings.TrimSpace(*req.Name)
+	}
+	if req.LinkedAttributeID != nil {
+		row.LinkedAttributeID = normalizeParentID(req.LinkedAttributeID)
+	}
+	if req.Type != nil {
+		row.Type = *req.Type
+	}
+	if req.Category != nil {
+		row.Category = req.Category
+	}
+	if req.SortOrder != nil {
+		row.SortOrder = *req.SortOrder
+	}
+	cfg, err := models.UnmarshalConfig[models.SkillConfig](row.ConfigJSON)
+	if err != nil {
+		return nil, err
+	}
+	if req.Config != nil {
+		cfg = *req.Config
+	}
+	sanitizeSkillConfig(row.Type, &cfg)
+	if err := validateSkillConfig(row.Type, &cfg); err != nil {
+		return nil, err
+	}
+	if err := svc.validateLinkedAttribute(systemID, row.LinkedAttributeID); err != nil {
+		return nil, err
+	}
+	if err := svc.ensureUniqueSkillName(systemID, row.Name, skillID); err != nil {
+		return nil, err
+	}
+	row.ConfigJSON, err = models.MarshalConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	updated, err := svc.repo.UpdateSkill(&row)
+	if err != nil {
+		return nil, err
+	}
+	return skillRowToResponse(updated), nil
 }
 
 func (svc *MechanicsService) DeleteSkill(systemID, skillID string) error {
+	if _, err := svc.repo.GetSkill(systemID, skillID); err != nil {
+		return err
+	}
 	return svc.repo.DeleteSkill(systemID, skillID)
 }
 
@@ -167,6 +433,7 @@ func attributeRowToResponse(row *models.SystemAttribute) *models.AttributeRespon
 	cfg, _ := models.UnmarshalConfig[models.AttributeConfig](row.ConfigJSON)
 	return &models.AttributeResponse{
 		ID: row.ID, SystemID: row.SystemID, GroupName: row.GroupName,
+		ParentAttributeID: row.ParentAttributeID,
 		Name: row.Name, Type: row.Type, Config: cfg, SortOrder: row.SortOrder,
 	}
 }

@@ -5,6 +5,9 @@
 	import SystemDeleteModal from './SystemDeleteModal.svelte';
 	import SystemMetadataForm from './SystemMetadataForm.svelte';
 	import SystemSaveTemplateModal from './SystemSaveTemplateModal.svelte';
+	import TE_AttributesTab from './TE_AttributesTab.svelte';
+	import TE_ResolutionTab from './TE_ResolutionTab.svelte';
+	import TE_SkillsTab from './TE_SkillsTab.svelte';
 	import {
 		archiveSystem,
 		cloneSystem,
@@ -41,6 +44,26 @@
 	let deleteOpen = $state(false);
 	let templateOpen = $state(false);
 
+	const OVERLAY_TABS = [
+		{ id: 'identity', label: 'Identity' },
+		{ id: 'resolution', label: 'Resolution' },
+		{ id: 'attributes', label: 'Attributes' },
+		{ id: 'skills', label: 'Skills' },
+		{ id: 'progression', label: 'Progression' },
+		{ id: 'resources', label: 'Resources' },
+		{ id: 'action_economy', label: 'Action Economy' }
+	] as const;
+
+	type OverlayTabId = (typeof OVERLAY_TABS)[number]['id'];
+
+	const TAB_PLACEHOLDERS: Partial<Record<OverlayTabId, string>> = {
+		progression: 'Coming in Step 9.',
+		resources: 'Coming in Step 9.',
+		action_economy: 'Coming in Step 10.'
+	};
+
+	let activeTab = $state<OverlayTabId>('identity');
+
 	const readOnly = $derived(
 		system != null && (system.status === 'locked' || system.status === 'archived')
 	);
@@ -58,8 +81,11 @@
 			form = systemToFormValues(system);
 			editing = false;
 			error = null;
+			activeTab = 'identity';
 		}
 	});
+
+	const activePlaceholder = $derived(TAB_PLACEHOLDERS[activeTab] ?? null);
 
 	function close() {
 		system = null;
@@ -157,35 +183,87 @@
 			<button type="button" class="btn-sm" onclick={handleExport}>Export</button>
 		</div>
 
-		{#if !readOnly && !editing}
-			<button type="button" class="btn-edit" onclick={() => (editing = true)}>Edit</button>
-		{/if}
+		<div class="overlay-tabs" role="tablist" aria-label="System editor sections">
+			{#each OVERLAY_TABS as tab}
+				<button
+					type="button"
+					role="tab"
+					class="overlay-tab"
+					class:active={activeTab === tab.id}
+					aria-selected={activeTab === tab.id}
+					onclick={() => (activeTab = tab.id)}
+				>
+					{tab.label}
+				</button>
+			{/each}
+		</div>
 
-		{#if editing && form}
-			<SystemMetadataForm
-				bind:form
-				showStatusExtras={true}
-				showTagsRulebooks={true}
-				{parentOptions}
-			/>
-			<ImageUploadZone variant="icon" previewUrl={system.icon_url} onfile={onIcon} />
-			<ImageUploadZone variant="cover" previewUrl={system.cover_url} onfile={onCover} />
-			{#if error}
-				<p class="form-error">{error}</p>
+		<div class="tab-panel" role="tabpanel">
+			{#if activeTab === 'identity'}
+				{#if !readOnly && !editing}
+					<button type="button" class="btn-edit" onclick={() => (editing = true)}>Edit</button>
+				{/if}
+
+				{#if editing && form}
+					<SystemMetadataForm
+						bind:form
+						showStatusExtras={true}
+						showTagsRulebooks={true}
+						{parentOptions}
+					/>
+					<ImageUploadZone variant="icon" previewUrl={system.icon_url} onfile={onIcon} />
+					<ImageUploadZone variant="cover" previewUrl={system.cover_url} onfile={onCover} />
+					{#if error}
+						<p class="form-error">{error}</p>
+					{/if}
+					<div class="edit-actions">
+						<button
+							type="button"
+							class="btn-secondary"
+							onclick={() => {
+								editing = false;
+								if (system) form = systemToFormValues(system);
+							}}
+						>
+							Cancel
+						</button>
+						<button type="button" class="btn-primary" disabled={saving} onclick={handleSave}>Save</button>
+					</div>
+				{:else if form}
+					<SystemMetadataForm
+						bind:form
+						disabled={true}
+						showStatusExtras={true}
+						showTagsRulebooks={true}
+						{parentOptions}
+					/>
+					{#if system.icon_url}
+						<ImageUploadZone
+							variant="icon"
+							previewUrl={system.icon_url}
+							disabled={readOnly}
+							onfile={onIcon}
+						/>
+					{/if}
+					{#if system.cover_url}
+						<ImageUploadZone
+							variant="cover"
+							previewUrl={system.cover_url}
+							disabled={readOnly}
+							onfile={onCover}
+						/>
+					{/if}
+				{/if}
+			{:else if activeTab === 'resolution'}
+				<TE_ResolutionTab systemId={system.id} disabled={readOnly} />
+			{:else if activeTab === 'attributes'}
+				<TE_AttributesTab systemId={system.id} disabled={readOnly} />
+			{:else if activeTab === 'skills'}
+				<TE_SkillsTab systemId={system.id} disabled={readOnly} />
+			{:else if activePlaceholder}
+				<p class="tab-placeholder">{activePlaceholder}</p>
 			{/if}
-			<div class="edit-actions">
-				<button type="button" class="btn-secondary" onclick={() => { editing = false; if (system) form = systemToFormValues(system); }}>Cancel</button>
-				<button type="button" class="btn-primary" disabled={saving} onclick={handleSave}>Save</button>
-			</div>
-		{:else}
-			<SystemMetadataForm bind:form disabled={true} showStatusExtras={true} showTagsRulebooks={true} {parentOptions} />
-			{#if system.icon_url}
-				<ImageUploadZone variant="icon" previewUrl={system.icon_url} disabled={readOnly} onfile={onIcon} />
-			{/if}
-			{#if system.cover_url}
-				<ImageUploadZone variant="cover" previewUrl={system.cover_url} disabled={readOnly} onfile={onCover} />
-			{/if}
-		{/if}
+		</div>
 
 		{#snippet footer()}
 			<button
@@ -282,5 +360,46 @@
 	.form-error {
 		color: #b91c1c;
 		font-size: 0.85rem;
+	}
+
+	.overlay-tabs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+		margin-bottom: 1rem;
+		border-bottom: 1px solid #e5e7eb;
+		padding-bottom: 0;
+	}
+
+	.overlay-tab {
+		padding: 0.5rem 0.85rem;
+		border: none;
+		border-bottom: 2px solid transparent;
+		margin-bottom: -1px;
+		background: transparent;
+		font: inherit;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #6b7280;
+		cursor: pointer;
+	}
+
+	.overlay-tab:hover {
+		color: var(--text-ink, #1a1a1a);
+	}
+
+	.overlay-tab.active {
+		color: var(--text-ink, #1a1a1a);
+		border-bottom-color: var(--accent-gm, #c9a227);
+	}
+
+	.tab-panel {
+		min-height: 8rem;
+	}
+
+	.tab-placeholder {
+		color: #6b7280;
+		font-size: 0.9rem;
+		margin: 1rem 0;
 	}
 </style>

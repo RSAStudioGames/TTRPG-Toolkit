@@ -7,7 +7,65 @@ import (
 // Typed config structs map to JSONB columns (fields added in later modules).
 
 // ResolutionConfig maps to system_mechanics.resolution_config.
-type ResolutionConfig struct{}
+type ResolutionConfig struct {
+	ResolutionType        string                      `json:"resolution_type"`
+	RollExpression          string                      `json:"roll_expression"`
+	CustomParadigmName      string                      `json:"custom_paradigm_name,omitempty"`
+	SuccessDetermination  SuccessDetermination        `json:"success_determination"`
+	CriticalMechanics     CriticalMechanics           `json:"critical_mechanics"`
+	AdvantageDisadvantage []AdvantageDisadvantageEntry `json:"advantage_disadvantage"`
+}
+
+// SuccessDetermination defines how roll outcomes map to success.
+type SuccessDetermination struct {
+	Method                  string       `json:"method"`
+	ThresholdLadder         []LadderTier `json:"threshold_ladder"`
+	DefaultTargetVariable   string       `json:"default_target_variable"`
+}
+
+// LadderTier is one tier in a success threshold ladder.
+type LadderTier struct {
+	Label    string `json:"label"`
+	Operator string `json:"operator"`
+	Value    int    `json:"value"`
+}
+
+// CriticalMechanics configures critical success and failure behavior.
+type CriticalMechanics struct {
+	EnableCritSuccess         bool   `json:"enable_crit_success"`
+	CritSuccessTrigger        string `json:"crit_success_trigger"`
+	CritSuccessExceedAmount   int    `json:"crit_success_exceed_amount"`
+	EnableCritFailure         bool   `json:"enable_crit_failure"`
+	CritFailureTrigger        string `json:"crit_failure_trigger"`
+}
+
+// AdvantageDisadvantageEntry defines a named advantage/disadvantage mechanic.
+type AdvantageDisadvantageEntry struct {
+	Name         string `json:"name"`
+	MechanicType string `json:"mechanic_type"`
+}
+
+// SaveResolutionConfigRequest is PUT /api/systems/{id}/mechanics/resolution body.
+type SaveResolutionConfigRequest struct {
+	ResolutionType        string                      `json:"resolution_type" validate:"required"`
+	RollExpression          string                      `json:"roll_expression" validate:"required"`
+	CustomParadigmName      string                      `json:"custom_paradigm_name,omitempty"`
+	SuccessDetermination  SuccessDetermination        `json:"success_determination" validate:"required"`
+	CriticalMechanics     CriticalMechanics           `json:"critical_mechanics" validate:"required"`
+	AdvantageDisadvantage []AdvantageDisadvantageEntry `json:"advantage_disadvantage" validate:"required"`
+}
+
+// ToResolutionConfig converts the request DTO to a ResolutionConfig for persistence.
+func (r SaveResolutionConfigRequest) ToResolutionConfig() ResolutionConfig {
+	return ResolutionConfig{
+		ResolutionType:        r.ResolutionType,
+		RollExpression:          r.RollExpression,
+		CustomParadigmName:      r.CustomParadigmName,
+		SuccessDetermination:  r.SuccessDetermination,
+		CriticalMechanics:     r.CriticalMechanics,
+		AdvantageDisadvantage: r.AdvantageDisadvantage,
+	}
+}
 
 // ProgressionConfig maps to system_mechanics.progression_config.
 type ProgressionConfig struct{}
@@ -15,11 +73,48 @@ type ProgressionConfig struct{}
 // ActionEconomyConfig maps to system_mechanics.action_economy_config.
 type ActionEconomyConfig struct{}
 
+// DescriptiveMapEntry is one label/value pair for descriptive attributes.
+type DescriptiveMapEntry struct {
+	Label string `json:"label"`
+	Value int    `json:"value"`
+}
+
+// RankMapEntry is one rank name with numeric backing for rank_tier attributes.
+type RankMapEntry struct {
+	RankName       string `json:"rank_name"`
+	NumericBacking int    `json:"numeric_backing"`
+}
+
 // AttributeConfig maps to system_attributes.config.
-type AttributeConfig struct{}
+type AttributeConfig struct {
+	Min                 int                   `json:"min,omitempty"`
+	Max                 int                   `json:"max,omitempty"`
+	NumericFormat       string                `json:"numeric_format,omitempty"`
+	StepDice            []string              `json:"step_dice,omitempty"`
+	DescriptiveMap      []DescriptiveMapEntry `json:"descriptive_map,omitempty"`
+	RankMap             []RankMapEntry        `json:"rank_map,omitempty"`
+	ModifierFormula     string                `json:"modifier_formula,omitempty"`
+	ModifierDisplay     string                `json:"modifier_display,omitempty"`
+	IsDerived           bool                  `json:"is_derived"`
+	DerivationFormula   string                `json:"derivation_formula,omitempty"`
+	CachingRule         string                `json:"caching_rule,omitempty"`
+	RecalculateTriggers []string              `json:"recalculate_triggers,omitempty"`
+}
+
+// SkillTierEntry is one tier for multi_tier skills.
+type SkillTierEntry struct {
+	TierName       string `json:"tier_name"`
+	NumericBacking int    `json:"numeric_backing"`
+}
 
 // SkillConfig maps to system_skills.config.
-type SkillConfig struct{}
+type SkillConfig struct {
+	Tiers                 []SkillTierEntry `json:"tiers,omitempty"`
+	Min                   int              `json:"min,omitempty"`
+	Max                   int              `json:"max,omitempty"`
+	AllowSpecializations  bool             `json:"allow_specializations"`
+	SpecializationBonus   int              `json:"specialization_bonus,omitempty"`
+}
 
 // ResourceConfig maps to system_resources.config.
 type ResourceConfig struct{}
@@ -35,13 +130,14 @@ type SystemMechanics struct {
 
 // SystemAttribute is a definitional attribute for a system.
 type SystemAttribute struct {
-	ID         string          `json:"id" db:"id"`
-	SystemID   string          `json:"system_id" db:"system_id"`
-	GroupName  *string         `json:"group_name,omitempty" db:"group_name"`
-	Name       string          `json:"name" db:"name"`
-	Type       string          `json:"type" db:"type"`
-	ConfigJSON json.RawMessage `json:"-" db:"config"`
-	SortOrder  int             `json:"sort_order" db:"sort_order"`
+	ID                string          `json:"id" db:"id"`
+	SystemID          string          `json:"system_id" db:"system_id"`
+	GroupName         *string         `json:"group_name,omitempty" db:"group_name"`
+	Name              string          `json:"name" db:"name"`
+	Type              string          `json:"type" db:"type"`
+	ConfigJSON        json.RawMessage `json:"-" db:"config"`
+	SortOrder         int             `json:"sort_order" db:"sort_order"`
+	ParentAttributeID *string         `json:"parent_attribute_id,omitempty" db:"parent_attribute_id"`
 }
 
 // SystemSkill is a skill definition linked optionally to an attribute.
@@ -111,31 +207,34 @@ type MechanicsResponse struct {
 
 // CreateAttributeRequest is POST /api/systems/{id}/attributes body.
 type CreateAttributeRequest struct {
-	GroupName *string         `json:"group_name"`
-	Name      string          `json:"name"`
-	Type      string          `json:"type"`
-	Config    AttributeConfig `json:"config"`
-	SortOrder int             `json:"sort_order"`
+	GroupName         *string         `json:"group_name"`
+	ParentAttributeID *string         `json:"parent_attribute_id"`
+	Name              string          `json:"name" validate:"required,min=3"`
+	Type              string          `json:"type" validate:"required,oneof=numeric step_die descriptive rank_tier custom"`
+	Config            AttributeConfig `json:"config" validate:"required"`
+	SortOrder         int             `json:"sort_order"`
 }
 
 // UpdateAttributeRequest is PUT /api/systems/{id}/attributes/{attrId} body.
 type UpdateAttributeRequest struct {
-	GroupName *string          `json:"group_name"`
-	Name      *string          `json:"name"`
-	Type      *string          `json:"type"`
-	Config    *AttributeConfig `json:"config"`
-	SortOrder *int             `json:"sort_order"`
+	GroupName         *string          `json:"group_name"`
+	ParentAttributeID *string          `json:"parent_attribute_id"`
+	Name              *string          `json:"name"`
+	Type              *string          `json:"type"`
+	Config            *AttributeConfig `json:"config"`
+	SortOrder         *int             `json:"sort_order"`
 }
 
 // AttributeResponse is a single attribute with typed config.
 type AttributeResponse struct {
-	ID        string          `json:"id"`
-	SystemID  string          `json:"system_id"`
-	GroupName *string         `json:"group_name,omitempty"`
-	Name      string          `json:"name"`
-	Type      string          `json:"type"`
-	Config    AttributeConfig `json:"config"`
-	SortOrder int             `json:"sort_order"`
+	ID                string          `json:"id"`
+	SystemID          string          `json:"system_id"`
+	GroupName         *string         `json:"group_name,omitempty"`
+	ParentAttributeID *string         `json:"parent_attribute_id,omitempty"`
+	Name              string          `json:"name"`
+	Type              string          `json:"type"`
+	Config            AttributeConfig `json:"config"`
+	SortOrder         int             `json:"sort_order"`
 }
 
 // ListAttributesResponse is GET /api/systems/{id}/attributes data.
@@ -145,12 +244,12 @@ type ListAttributesResponse struct {
 
 // CreateSkillRequest is POST /api/systems/{id}/skills body.
 type CreateSkillRequest struct {
-	Name              string     `json:"name"`
-	LinkedAttributeID *string    `json:"linked_attribute_id"`
-	Type              string     `json:"type"`
-	Category          *string    `json:"category"`
-	Config            SkillConfig `json:"config"`
-	SortOrder         int        `json:"sort_order"`
+	Name              string      `json:"name" validate:"required"`
+	LinkedAttributeID *string     `json:"linked_attribute_id"`
+	Type              string      `json:"type" validate:"required,oneof=binary multi_tier numeric step_die rank_name"`
+	Category          *string     `json:"category"`
+	Config            SkillConfig `json:"config" validate:"required"`
+	SortOrder         int         `json:"sort_order"`
 }
 
 // UpdateSkillRequest is PUT /api/systems/{id}/skills/{skillId} body.

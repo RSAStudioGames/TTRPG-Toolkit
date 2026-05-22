@@ -1,6 +1,10 @@
 package repository
 
 import (
+	"database/sql"
+	"encoding/json"
+	"errors"
+
 	"github.com/gabriel/ttrpg-toolkit/backend/internal/models"
 	"github.com/jmoiron/sqlx"
 )
@@ -15,9 +19,51 @@ func NewMechanicsRepository(db *sqlx.DB) *MechanicsRepository {
 	return &MechanicsRepository{db: db}
 }
 
+const mechanicsColumns = `id, system_id, resolution_config, progression_config, action_economy_config`
+
+func normalizeMechanicsJSON(row *models.SystemMechanics) {
+	if len(row.ResolutionConfigJSON) == 0 {
+		row.ResolutionConfigJSON = models.EmptyJSONObject()
+	}
+	if len(row.ProgressionConfigJSON) == 0 {
+		row.ProgressionConfigJSON = models.EmptyJSONObject()
+	}
+	if len(row.ActionEconomyConfigJSON) == 0 {
+		row.ActionEconomyConfigJSON = models.EmptyJSONObject()
+	}
+}
+
 // GetMechanicsBySystemID loads the mechanics row for a system.
 func (r *MechanicsRepository) GetMechanicsBySystemID(systemID string) (*models.SystemMechanics, error) {
-	return nil, ErrNotFound
+	var row models.SystemMechanics
+	q := `SELECT ` + mechanicsColumns + ` FROM system_mechanics WHERE system_id = $1`
+	if err := r.db.Get(&row, q, systemID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	normalizeMechanicsJSON(&row)
+	return &row, nil
+}
+
+// UpsertResolutionConfig inserts or updates resolution_config for a system.
+func (r *MechanicsRepository) UpsertResolutionConfig(systemID string, resolutionJSON json.RawMessage) (*models.SystemMechanics, error) {
+	if len(resolutionJSON) == 0 {
+		resolutionJSON = models.EmptyJSONObject()
+	}
+	var row models.SystemMechanics
+	q := `
+INSERT INTO system_mechanics (system_id, resolution_config, progression_config, action_economy_config)
+VALUES ($1, $2, '{}', '{}')
+ON CONFLICT (system_id) DO UPDATE
+  SET resolution_config = EXCLUDED.resolution_config
+RETURNING ` + mechanicsColumns
+	if err := r.db.Get(&row, q, systemID, resolutionJSON); err != nil {
+		return nil, err
+	}
+	normalizeMechanicsJSON(&row)
+	return &row, nil
 }
 
 // UpsertMechanics creates or updates mechanics for a system.
@@ -25,60 +71,216 @@ func (r *MechanicsRepository) UpsertMechanics(_ *models.SystemMechanics) (*model
 	return nil, ErrNotFound
 }
 
+const attributeColumns = `id, system_id, group_name, name, type, config, sort_order, parent_attribute_id`
+
+func normalizeAttributeJSON(row *models.SystemAttribute) {
+	if len(row.ConfigJSON) == 0 {
+		row.ConfigJSON = models.EmptyJSONObject()
+	}
+}
+
 // ListAttributes returns attributes for a system ordered by sort_order.
 func (r *MechanicsRepository) ListAttributes(systemID string) ([]models.SystemAttribute, error) {
-	_ = systemID
-	return []models.SystemAttribute{}, nil
+	var rows []models.SystemAttribute
+	q := `SELECT ` + attributeColumns + ` FROM system_attributes WHERE system_id = $1 ORDER BY sort_order, name`
+	if err := r.db.Select(&rows, q, systemID); err != nil {
+		return nil, err
+	}
+	for i := range rows {
+		normalizeAttributeJSON(&rows[i])
+	}
+	return rows, nil
 }
 
 // GetAttribute loads one attribute by id.
 func (r *MechanicsRepository) GetAttribute(systemID, attrID string) (*models.SystemAttribute, error) {
-	_, _ = systemID, attrID
-	return nil, ErrNotFound
+	var row models.SystemAttribute
+	q := `SELECT ` + attributeColumns + ` FROM system_attributes WHERE system_id = $1 AND id = $2`
+	if err := r.db.Get(&row, q, systemID, attrID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	normalizeAttributeJSON(&row)
+	return &row, nil
+}
+
+// AttributeNameExists reports whether another attribute in the system has the same name (case-insensitive).
+func (r *MechanicsRepository) AttributeNameExists(systemID, name, excludeID string) (bool, error) {
+	var exists bool
+	q := `SELECT EXISTS(
+		SELECT 1 FROM system_attributes
+		WHERE system_id = $1 AND lower(name) = lower($2) AND ($3 = '' OR id::text != $3)
+	)`
+	if err := r.db.Get(&exists, q, systemID, name, excludeID); err != nil {
+		return false, err
+	}
+	return exists, nil
 }
 
 // CreateAttribute inserts a new attribute.
-func (r *MechanicsRepository) CreateAttribute(_ *models.SystemAttribute) (*models.SystemAttribute, error) {
-	return nil, ErrNotFound
+func (r *MechanicsRepository) CreateAttribute(row *models.SystemAttribute) (*models.SystemAttribute, error) {
+	if len(row.ConfigJSON) == 0 {
+		row.ConfigJSON = models.EmptyJSONObject()
+	}
+	var created models.SystemAttribute
+	q := `
+INSERT INTO system_attributes (system_id, group_name, name, type, config, sort_order, parent_attribute_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING ` + attributeColumns
+	if err := r.db.Get(&created, q,
+		row.SystemID, row.GroupName, row.Name, row.Type, row.ConfigJSON, row.SortOrder, row.ParentAttributeID,
+	); err != nil {
+		return nil, err
+	}
+	normalizeAttributeJSON(&created)
+	return &created, nil
 }
 
 // UpdateAttribute updates an existing attribute.
-func (r *MechanicsRepository) UpdateAttribute(_ *models.SystemAttribute) (*models.SystemAttribute, error) {
-	return nil, ErrNotFound
+func (r *MechanicsRepository) UpdateAttribute(row *models.SystemAttribute) (*models.SystemAttribute, error) {
+	if len(row.ConfigJSON) == 0 {
+		row.ConfigJSON = models.EmptyJSONObject()
+	}
+	var updated models.SystemAttribute
+	q := `
+UPDATE system_attributes
+SET group_name = $3, name = $4, type = $5, config = $6, sort_order = $7, parent_attribute_id = $8
+WHERE system_id = $1 AND id = $2
+RETURNING ` + attributeColumns
+	if err := r.db.Get(&updated, q,
+		row.SystemID, row.ID, row.GroupName, row.Name, row.Type, row.ConfigJSON, row.SortOrder, row.ParentAttributeID,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	normalizeAttributeJSON(&updated)
+	return &updated, nil
 }
 
 // DeleteAttribute removes an attribute.
 func (r *MechanicsRepository) DeleteAttribute(systemID, attrID string) error {
-	_, _ = systemID, attrID
-	return ErrNotFound
+	res, err := r.db.Exec(`DELETE FROM system_attributes WHERE system_id = $1 AND id = $2`, systemID, attrID)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+const skillColumns = `id, system_id, name, linked_attribute_id, type, category, config, sort_order`
+
+func normalizeSkillJSON(row *models.SystemSkill) {
+	if len(row.ConfigJSON) == 0 {
+		row.ConfigJSON = models.EmptyJSONObject()
+	}
 }
 
 // ListSkills returns skills for a system.
 func (r *MechanicsRepository) ListSkills(systemID string) ([]models.SystemSkill, error) {
-	_ = systemID
-	return []models.SystemSkill{}, nil
+	var rows []models.SystemSkill
+	q := `SELECT ` + skillColumns + ` FROM system_skills WHERE system_id = $1 ORDER BY sort_order, name`
+	if err := r.db.Select(&rows, q, systemID); err != nil {
+		return nil, err
+	}
+	for i := range rows {
+		normalizeSkillJSON(&rows[i])
+	}
+	return rows, nil
 }
 
 // GetSkill loads one skill by id.
 func (r *MechanicsRepository) GetSkill(systemID, skillID string) (*models.SystemSkill, error) {
-	_, _ = systemID, skillID
-	return nil, ErrNotFound
+	var row models.SystemSkill
+	q := `SELECT ` + skillColumns + ` FROM system_skills WHERE system_id = $1 AND id = $2`
+	if err := r.db.Get(&row, q, systemID, skillID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	normalizeSkillJSON(&row)
+	return &row, nil
+}
+
+// SkillNameExists reports whether another skill in the system has the same name (case-insensitive).
+func (r *MechanicsRepository) SkillNameExists(systemID, name, excludeID string) (bool, error) {
+	var exists bool
+	q := `SELECT EXISTS(
+		SELECT 1 FROM system_skills
+		WHERE system_id = $1 AND lower(name) = lower($2) AND ($3 = '' OR id::text != $3)
+	)`
+	if err := r.db.Get(&exists, q, systemID, name, excludeID); err != nil {
+		return false, err
+	}
+	return exists, nil
 }
 
 // CreateSkill inserts a new skill.
-func (r *MechanicsRepository) CreateSkill(_ *models.SystemSkill) (*models.SystemSkill, error) {
-	return nil, ErrNotFound
+func (r *MechanicsRepository) CreateSkill(row *models.SystemSkill) (*models.SystemSkill, error) {
+	if len(row.ConfigJSON) == 0 {
+		row.ConfigJSON = models.EmptyJSONObject()
+	}
+	var created models.SystemSkill
+	q := `
+INSERT INTO system_skills (system_id, name, linked_attribute_id, type, category, config, sort_order)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING ` + skillColumns
+	if err := r.db.Get(&created, q,
+		row.SystemID, row.Name, row.LinkedAttributeID, row.Type, row.Category, row.ConfigJSON, row.SortOrder,
+	); err != nil {
+		return nil, err
+	}
+	normalizeSkillJSON(&created)
+	return &created, nil
 }
 
 // UpdateSkill updates an existing skill.
-func (r *MechanicsRepository) UpdateSkill(_ *models.SystemSkill) (*models.SystemSkill, error) {
-	return nil, ErrNotFound
+func (r *MechanicsRepository) UpdateSkill(row *models.SystemSkill) (*models.SystemSkill, error) {
+	if len(row.ConfigJSON) == 0 {
+		row.ConfigJSON = models.EmptyJSONObject()
+	}
+	var updated models.SystemSkill
+	q := `
+UPDATE system_skills
+SET name = $3, linked_attribute_id = $4, type = $5, category = $6, config = $7, sort_order = $8
+WHERE system_id = $1 AND id = $2
+RETURNING ` + skillColumns
+	if err := r.db.Get(&updated, q,
+		row.SystemID, row.ID, row.Name, row.LinkedAttributeID, row.Type, row.Category, row.ConfigJSON, row.SortOrder,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	normalizeSkillJSON(&updated)
+	return &updated, nil
 }
 
 // DeleteSkill removes a skill.
 func (r *MechanicsRepository) DeleteSkill(systemID, skillID string) error {
-	_, _ = systemID, skillID
-	return ErrNotFound
+	res, err := r.db.Exec(`DELETE FROM system_skills WHERE system_id = $1 AND id = $2`, systemID, skillID)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 // ListResources returns resources for a system.

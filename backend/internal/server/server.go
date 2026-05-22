@@ -40,8 +40,8 @@ func New(cfg config.Config) (*fiber.App, func(), error) {
 		repo := repository.NewSystemRepository(db)
 		deps.Systems = services.NewSystemService(repo, cfg.UploadDir)
 		mechanicsRepo := repository.NewMechanicsRepository(db)
-		deps.Mechanics = services.NewMechanicsService(mechanicsRepo)
 		deps.Formula = services.NewFormulaService()
+		deps.Mechanics = services.NewMechanicsService(mechanicsRepo, repo, deps.Formula)
 	}
 
 	staticFS, err := fs.Sub(ui.Static, "static")

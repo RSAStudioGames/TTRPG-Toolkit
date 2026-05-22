@@ -7,9 +7,10 @@
 		onclose: () => void;
 		children: Snippet;
 		footer?: Snippet;
+		wide?: boolean;
 	}
 
-	let { open, title, onclose, children, footer }: Props = $props();
+	let { open, title, onclose, children, footer, wide = false }: Props = $props();
 
 	function handleBackdrop(e: MouseEvent) {
 		if (e.target === e.currentTarget) onclose();
@@ -25,7 +26,13 @@
 {#if open}
 	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 	<div class="modal-backdrop" role="presentation" onclick={handleBackdrop}>
-		<div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+		<div
+			class="modal-panel"
+			class:modal-panel--wide={wide}
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="modal-title"
+		>
 			<header class="modal-header">
 				<h2 id="modal-title">{title}</h2>
 				<button type="button" class="modal-close" aria-label="Close" onclick={onclose}>×</button>
@@ -63,6 +70,10 @@
 		border-radius: 12px;
 		border: 2px solid var(--accent-gm);
 		box-shadow: var(--shadow-card-hover-gm);
+	}
+
+	.modal-panel--wide {
+		width: min(720px, 100%);
 	}
 
 	.modal-header {
