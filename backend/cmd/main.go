@@ -16,7 +16,12 @@ func main() {
 	addr := cfg.Addr()
 	log.Printf("TTRPG Toolkit (Fiber) listening on http://%s", addr)
 
-	app := server.New()
+	app, cleanup, err := server.New(cfg)
+	if err != nil {
+		log.Fatalf("server: %v", err)
+	}
+	defer cleanup()
+
 	if err := app.Listen(addr); err != nil {
 		log.Fatalf("server: %v", err)
 	}

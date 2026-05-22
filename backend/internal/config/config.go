@@ -14,10 +14,17 @@ const (
 	defaultPort = 8080
 )
 
+const (
+	defaultDatabaseURL = "postgres://ttrpg:ttrpg@localhost:43021/ttrpg_toolkit?sslmode=disable"
+	defaultUploadDir   = "./data/uploads"
+)
+
 // Config holds server configuration resolved from defaults, .env, and OS env.
 type Config struct {
-	Host string
-	Port int
+	Host        string
+	Port        int
+	DatabaseURL string
+	UploadDir   string
 }
 
 // Load reads configuration: compiled defaults, then .env at repo root, then OS env.
@@ -34,7 +41,12 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("TTRPG_SERVER_PORT out of range: %d", port)
 	}
 
-	return Config{Host: host, Port: port}, nil
+	return Config{
+		Host:        host,
+		Port:        port,
+		DatabaseURL: envOrDefault("TTRPG_DATABASE_URL", defaultDatabaseURL),
+		UploadDir:   envOrDefault("TTRPG_UPLOAD_DIR", defaultUploadDir),
+	}, nil
 }
 
 func loadDotEnv() error {

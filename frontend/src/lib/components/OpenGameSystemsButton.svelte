@@ -5,24 +5,24 @@
 	const buttonTransition = { type: 'spring' as const, stiffness: 500, damping: 35 };
 
 	function handleClick() {
-		goto('/gm/system-management');
+		goto('/gm/game-systems');
 	}
 </script>
 
 <motion.button
 	type="button"
-	class="open-system-builder-button"
+	class="open-game-systems-button"
 	whileHover={{ filter: 'brightness(0.97)' }}
 	whileTap={{ scale: 0.98 }}
 	transition={buttonTransition}
 	onclick={handleClick}
 >
 	<i class="fas fa-arrow-right" aria-hidden="true"></i>
-	Open System Management
+	Open Game Systems
 </motion.button>
 
 <style>
-	:global(.open-system-builder-button) {
+	:global(.open-game-systems-button) {
 		display: flex;
 		width: 100%;
 		align-items: center;
@@ -40,7 +40,7 @@
 		transition: filter 0.15s ease;
 	}
 
-	:global(.open-system-builder-button:active) {
+	:global(.open-game-systems-button:active) {
 		filter: brightness(0.92);
 	}
 </style>

@@ -5,6 +5,9 @@
 # Environment
 .env
 
+# Local uploads (icons, covers)
+data/
+
 # Build artifacts
 build/
 

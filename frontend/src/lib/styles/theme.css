@@ -1,3 +1,5 @@
+@import './forms.css';
+
 :root {
 	--bg-paper: #fafafa;
 	--text-ink: #111827;

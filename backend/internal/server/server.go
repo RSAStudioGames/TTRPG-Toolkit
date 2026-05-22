@@ -3,31 +3,52 @@ package server
 import (
 	"io/fs"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gabriel/ttrpg-toolkit/backend/internal/api"
+	"github.com/gabriel/ttrpg-toolkit/backend/internal/config"
+	"github.com/gabriel/ttrpg-toolkit/backend/internal/repository"
+	"github.com/gabriel/ttrpg-toolkit/backend/internal/services"
 	"github.com/gabriel/ttrpg-toolkit/backend/ui"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
-// New returns a configured Fiber application.
-func New() *fiber.App {
+// New returns a configured Fiber application and a cleanup function.
+func New(cfg config.Config) (*fiber.App, func(), error) {
 	app := fiber.New(fiber.Config{
 		DisableStartupMessage: false,
 	})
 
 	app.Use(logger.New())
 
-	staticFS, err := fs.Sub(ui.Static, "static")
-	if err != nil {
-		panic("embedded static files: " + err.Error())
+	var cleanup func() = func() {}
+	deps := api.Deps{UploadDir: cfg.UploadDir}
+
+	if cfg.DatabaseURL != "" {
+		db, err := repository.Connect(cfg.DatabaseURL)
+		if err != nil {
+			return nil, nil, err
+		}
+		cleanup = func() { _ = db.Close() }
+		if err := os.MkdirAll(cfg.UploadDir, 0o755); err != nil {
+			_ = db.Close()
+			return nil, nil, err
+		}
+		repo := repository.NewSystemRepository(db)
+		deps.Systems = services.NewSystemService(repo, cfg.UploadDir)
 	}
 
-	api.Register(app)
+	staticFS, err := fs.Sub(ui.Static, "static")
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
 
-	// Embedded SvelteKit build: assets + SPA fallback to index.html.
+	api.Register(app, deps)
+
 	app.Use("/", filesystem.New(filesystem.Config{
 		Root:         http.FS(staticFS),
 		Browse:       false,
@@ -38,5 +59,5 @@ func New() *fiber.App {
 		},
 	}))
 
-	return app
+	return app, cleanup, nil
 }

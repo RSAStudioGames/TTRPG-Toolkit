@@ -2,45 +2,57 @@
 	import { goto } from '$app/navigation';
 	import { motion } from '@humanspeak/svelte-motion';
 
+	interface Props {
+		href: string;
+		parentTitle: string;
+	}
+
+	let { href, parentTitle }: Props = $props();
+
 	const buttonTransition = { type: 'spring' as const, stiffness: 500, damping: 35 };
 
 	function handleClick() {
-		goto('/gm/system-management');
+		goto(href);
 	}
 </script>
 
 <motion.button
 	type="button"
-	class="open-system-builder-button"
+	class="back-button"
 	whileHover={{ filter: 'brightness(0.97)' }}
 	whileTap={{ scale: 0.98 }}
 	transition={buttonTransition}
 	onclick={handleClick}
 >
-	<i class="fas fa-arrow-right" aria-hidden="true"></i>
-	Open System Management
+	<i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+	Back to {parentTitle}
 </motion.button>
 
 <style>
-	:global(.open-system-builder-button) {
-		display: flex;
-		width: 100%;
+	:global(.back-button) {
+		display: inline-flex;
 		align-items: center;
 		justify-content: center;
 		gap: 0.5rem;
-		padding: 0.875rem 1.25rem;
-		border: none;
+		padding: 0.5rem 1rem;
+		border: 1px solid var(--text-muted);
 		border-radius: 8px;
-		background: var(--accent-gm-muted);
+		background: transparent;
 		color: var(--text-ink);
-		font-size: 1rem;
+		font-size: 0.9375rem;
 		font-weight: 600;
 		font-family: inherit;
 		cursor: pointer;
-		transition: filter 0.15s ease;
+		transition:
+			filter 0.15s ease,
+			border-color 0.15s ease;
 	}
 
-	:global(.open-system-builder-button:active) {
-		filter: brightness(0.92);
+	:global(.back-button:hover) {
+		border-color: var(--accent-primary);
+	}
+
+	:global(.back-button:active) {
+		filter: brightness(0.95);
 	}
 </style>

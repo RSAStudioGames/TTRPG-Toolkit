@@ -1,0 +1,6 @@
+ALTER TABLE systems
+    ADD COLUMN IF NOT EXISTS parent_system_id UUID REFERENCES systems (id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS is_core BOOLEAN NOT NULL DEFAULT TRUE,
+    ADD COLUMN IF NOT EXISTS is_protected BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE INDEX IF NOT EXISTS idx_systems_parent ON systems (parent_system_id);

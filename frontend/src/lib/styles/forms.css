@@ -1,0 +1,263 @@
+/* Global form styles — imported from theme.css (not scoped in Svelte components). */
+
+:root {
+	--input-border: #d1d5db;
+	--input-bg: #ffffff;
+	--input-focus-ring: var(--accent-gm);
+}
+
+.form-section {
+	margin-bottom: 1.5rem;
+}
+
+.form-section h3 {
+	margin: 0 0 0.75rem;
+	font-size: 0.95rem;
+	font-weight: 700;
+	color: var(--text-ink);
+	border-bottom: 1px solid var(--accent-gm-muted);
+	padding-bottom: 0.35rem;
+}
+
+.form-field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	margin-bottom: 0.85rem;
+}
+
+.form-field label,
+.form-field .field-label {
+	font-size: 0.875rem;
+	font-weight: 600;
+	color: var(--text-ink);
+}
+
+.form-field .hint {
+	font-size: 0.8rem;
+	color: var(--text-muted);
+	font-weight: 400;
+	margin: 0;
+}
+
+.form-field input[type='text'],
+.form-field input[type='url'],
+.form-field input[type='number'],
+.form-field input[type='email'],
+.form-field input[type='search'],
+.form-field select,
+.form-field textarea,
+.form-field .add-row input[type='text'],
+.form-field .link-row input[type='url'] {
+	width: 100%;
+	padding: 0.5rem 0.65rem;
+	border: 1px solid var(--input-border);
+	border-radius: 6px;
+	font: inherit;
+	color: var(--text-ink);
+	background: var(--input-bg);
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-field input::placeholder,
+.form-field textarea::placeholder {
+	color: var(--text-muted);
+	opacity: 0.85;
+}
+
+.form-field input:focus-visible,
+.form-field select:focus-visible,
+.form-field textarea:focus-visible,
+.form-field .add-row input:focus-visible,
+.form-field .link-row input:focus-visible {
+	outline: none;
+	border-color: var(--input-focus-ring);
+	box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.35);
+}
+
+.form-field input:disabled,
+.form-field select:disabled,
+.form-field textarea:disabled {
+	opacity: 0.65;
+	cursor: not-allowed;
+	background: #f3f4f6;
+}
+
+.form-field textarea {
+	min-height: 5rem;
+	resize: vertical;
+	line-height: 1.45;
+}
+
+.form-field select {
+	cursor: pointer;
+	appearance: auto;
+}
+
+.form-error {
+	color: #b91c1c;
+	font-size: 0.8rem;
+	margin: 0.25rem 0 0;
+}
+
+.player-range {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.player-range input {
+	flex: 1;
+}
+
+.toggle-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 0.75rem;
+}
+
+.toggle-row label {
+	font-weight: 600;
+}
+
+.toggle-row input[type='checkbox'] {
+	width: 2.5rem;
+	height: 1.35rem;
+	accent-color: var(--accent-gm);
+	cursor: pointer;
+}
+
+/* Semantic version row */
+.form-field .semver {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+.form-field .semver input[type='number'] {
+	width: 4rem;
+	text-align: center;
+}
+
+.form-field .semver span {
+	color: var(--text-muted);
+	font-weight: 600;
+}
+
+/* Token / link rows */
+.form-field .add-row {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.form-field .add-row input {
+	flex: 1;
+}
+
+.form-field .link-row {
+	display: flex;
+	gap: 0.5rem;
+	margin-bottom: 0.35rem;
+}
+
+.form-field .link-row input {
+	flex: 1;
+}
+
+.btn-secondary-sm {
+	align-self: flex-start;
+	padding: 0.4rem 0.85rem;
+	border: 1px solid var(--input-border);
+	border-radius: 6px;
+	background: var(--input-bg);
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+	color: var(--text-ink);
+	transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-secondary-sm:hover:not(:disabled) {
+	background: var(--accent-gm-muted);
+	border-color: var(--accent-gm);
+}
+
+.btn-secondary-sm:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+
+.btn-text {
+	border: none;
+	background: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	font-size: 0.8rem;
+	font-family: inherit;
+}
+
+.btn-text:hover:not(:disabled) {
+	color: var(--text-ink);
+}
+
+/* JSON import zone */
+.import-zone {
+	margin-bottom: 1rem;
+	padding: 0.85rem 1rem;
+	border: 1px dashed var(--input-border);
+	border-radius: 8px;
+	background: rgba(233, 229, 209, 0.25);
+}
+
+.import-zone .import-label {
+	display: block;
+	font-weight: 600;
+	font-size: 0.875rem;
+	margin-bottom: 0.5rem;
+	color: var(--text-ink);
+}
+
+.file-picker {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.file-picker-input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.file-picker-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.5rem 1rem;
+	border: 1px solid var(--accent-gm);
+	border-radius: 6px;
+	background: var(--accent-gm-muted);
+	color: var(--text-ink);
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+	transition: filter 0.15s ease;
+}
+
+.file-picker-button:hover {
+	filter: brightness(0.97);
+}
+
+.file-picker-hint {
+	font-size: 0.8rem;
+	color: var(--text-muted);
+}

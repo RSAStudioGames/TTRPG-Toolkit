@@ -1,8 +1,15 @@
+# PostgreSQL only — for local dev with ./ttrpg-toolkit on the host.
+#
+#   docker compose -f docker-compose.db.yml up -d
+#
+# Use in .env:
+#   TTRPG_DATABASE_URL=postgres://ttrpg:ttrpg@localhost:43021/ttrpg_toolkit?sslmode=disable
+
 services:
   postgres:
     image: postgres:16-alpine
     ports:
-      - '5432:5432'
+      - '43021:5432'
     environment:
       POSTGRES_USER: ttrpg
       POSTGRES_PASSWORD: ttrpg
@@ -14,26 +21,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
-
-  app:
-    build: .
-    env_file: .env
-    expose:
-      - '8080'
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
-
-  caddy:
-    image: caddy:2-alpine
-    ports:
-      - '${CADDY_PORT:-80}:80'
-    volumes:
-      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
-    depends_on:
-      - app
     restart: unless-stopped
 
 volumes:

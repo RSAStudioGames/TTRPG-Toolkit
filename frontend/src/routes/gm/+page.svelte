@@ -13,7 +13,7 @@
 	<LandingRoleCard
 		role="gm"
 		iconClass="fa-solid fa-screwdriver-wrench"
-		title="System Builder"
+		title="System Management"
 		description="TTRPG Management Hub"
 	>
 		<OpenSystemBuilderButton />

@@ -53,6 +53,9 @@
 	}
 
 	.header-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
 		flex-shrink: 0;
 	}
 
