@@ -1,5 +1,5 @@
 I'm using AI to develop most of this because I don't know how to program all that much.
-This is supposed to be a tool to help keep things organized for your TTRPG game. You can enter in all the game rules and such and this toolkit can then use that info for data-driven tools based off the specific ruleset and such. I'm still planning things out as I go along.
+This is supposed to be a tool to help keep things organized for your TTRPG game. You can enter in all the game rules and such and this toolkit can then use that info for data-driven tools based off the specific ruleset and such. I'm still planning things out as I go along. I had a big portion of this stuff already made in a python version before, but I wanted to make it nice and useable for anyone, not just me.
 
 There's too many tools out there that have too narrow of a scope. I'm trying to combine all those different aspects together into one full-fledged campaign manager that has support for any game, including custom stuff.
 
