@@ -50,3 +50,6 @@ export const RECALCULATE_TRIGGER_OPTIONS: SelectOption[] = [
 
 export const MODIFIER_FORMULA_HELPER =
 	'Reference the attribute score as {score}. Example: floor(({score} - 10) / 2)';
+
+export const DERIVATION_FORMULA_HELPER =
+	'Reference attributes like {strength_mod}. Example: {constitution} + {size_rating}';

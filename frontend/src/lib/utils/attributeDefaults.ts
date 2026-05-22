@@ -19,7 +19,7 @@ export interface AttributeFormConfig extends AttributeConfig {
 }
 
 export interface AttributeFormState {
-	group_name: string;
+	attribute_group_id: string;
 	parent_attribute_id: string;
 	name: string;
 	type: string;
@@ -73,18 +73,48 @@ function withNormalizedConfig(cfg: AttributeFormConfig): AttributeFormConfig {
 }
 
 export function defaultAttributeForm(type = ATTRIBUTE_TYPE_NUMERIC): AttributeFormState {
-	return {
-		group_name: '',
+	const form = {
+		attribute_group_id: '',
 		parent_attribute_id: '',
 		name: '',
 		type,
 		config: defaultAttributeConfig(type)
 	};
+	form.config.is_derived = false;
+	return form;
+}
+
+export function defaultDerivedAttributeForm(): AttributeFormState {
+	const form = defaultAttributeForm(ATTRIBUTE_TYPE_NUMERIC);
+	form.config.is_derived = true;
+	form.config.caching_rule = 'on_trigger';
+	form.config.recalculate_triggers = [];
+	return form;
+}
+
+export function derivedAttributeToForm(attr: AttributeResponse): AttributeFormState {
+	const form = attributeToForm(attr);
+	form.config.is_derived = true;
+	return form;
+}
+
+export function validateDerivedAttributeForm(form: AttributeFormState): string | null {
+	const name = form.name.trim();
+	if (name.length < 3) {
+		return 'Name is required (at least 3 characters).';
+	}
+	if (!form.config.derivation_formula?.trim()) {
+		return 'Derivation Formula is required.';
+	}
+	if ((form.config.recalculate_triggers?.length ?? 0) === 0) {
+		return 'Select at least one Recalculate Trigger.';
+	}
+	return null;
 }
 
 export function attributeToForm(attr: AttributeResponse): AttributeFormState {
 	return {
-		group_name: attr.group_name ?? '',
+		attribute_group_id: attr.attribute_group_id ?? '',
 		parent_attribute_id: attr.parent_attribute_id ?? '',
 		name: attr.name,
 		type: attr.type,
@@ -139,7 +169,7 @@ function sanitizeConfigForSubmit(config: AttributeConfig): AttributeConfig {
 	return out;
 }
 
-function optionalGroupName(group: string): string | null | undefined {
+function optionalGroupId(group: string): string | null | undefined {
 	const t = group.trim();
 	return t === '' ? null : t;
 }
@@ -156,7 +186,7 @@ export function formToCreatePayload(
 	return {
 		name: form.name.trim(),
 		type: form.type,
-		group_name: optionalGroupName(form.group_name),
+		attribute_group_id: optionalGroupId(form.attribute_group_id),
 		parent_attribute_id: optionalParentId(form.parent_attribute_id),
 		config: sanitizeConfigForSubmit(form.config),
 		sort_order: sortOrder
@@ -167,7 +197,7 @@ export function formToUpdatePayload(form: AttributeFormState): UpdateAttributePa
 	return {
 		name: form.name.trim(),
 		type: form.type,
-		group_name: optionalGroupName(form.group_name),
+		attribute_group_id: optionalGroupId(form.attribute_group_id),
 		parent_attribute_id: optionalParentId(form.parent_attribute_id),
 		config: sanitizeConfigForSubmit(form.config)
 	};

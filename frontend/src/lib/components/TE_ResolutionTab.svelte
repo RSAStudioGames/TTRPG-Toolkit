@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import TE_FormulaBuilder from './TE_FormulaBuilder.svelte';
+	import TE_MechanicList from './TE_MechanicList.svelte';
+	import TE_ThresholdEditor from './TE_ThresholdEditor.svelte';
 	import { getMechanics, saveResolutionConfig } from '$lib/api/mechanics';
 	import { ApiError } from '$lib/api/client';
 	import {
 		CRIT_FAILURE_TRIGGER_OPTIONS,
 		CRIT_SUCCESS_TRIGGER_OPTIONS,
 		CRIT_TRIGGER_EXCEED_DC,
-		LADDER_OPERATOR_OPTIONS,
-		MECHANIC_TYPE_OPTIONS,
 		RESOLUTION_TYPE_CUSTOM,
 		RESOLUTION_TYPE_OPTIONS,
 		SUCCESS_METHOD_OPTIONS,
@@ -113,29 +113,6 @@
 		}
 	}
 
-	function addLadderTier() {
-		config.success_determination.threshold_ladder = [
-			...config.success_determination.threshold_ladder,
-			{ label: '', operator: '>=', value: 0 }
-		];
-	}
-
-	function removeLadderTier(index: number) {
-		config.success_determination.threshold_ladder =
-			config.success_determination.threshold_ladder.filter((_, i) => i !== index);
-	}
-
-	function addMechanic() {
-		config.advantage_disadvantage = [
-			...config.advantage_disadvantage,
-			{ name: '', mechanic_type: 'add_modifier' }
-		];
-	}
-
-	function removeMechanic(index: number) {
-		config.advantage_disadvantage = config.advantage_disadvantage.filter((_, i) => i !== index);
-	}
-
 	$effect(() => {
 		if (loading) return;
 		markDirty();
@@ -219,47 +196,7 @@
 			{/if}
 
 			{#if showLadder}
-				<div class="ladder-list">
-					<h4>Threshold Ladder</h4>
-					{#each config.success_determination.threshold_ladder as tier, i (i)}
-						<div class="ladder-row">
-							<div class="form-field">
-								<label for="tier-label-{i}">Threshold Label</label>
-								<input
-									id="tier-label-{i}"
-									type="text"
-									bind:value={tier.label}
-									{disabled}
-								/>
-							</div>
-							<div class="form-field">
-								<label for="tier-op-{i}">Operator</label>
-								<select id="tier-op-{i}" bind:value={tier.operator} {disabled}>
-									{#each LADDER_OPERATOR_OPTIONS as op}
-										<option value={op.value}>{op.label}</option>
-									{/each}
-								</select>
-							</div>
-							<div class="form-field">
-								<label for="tier-val-{i}">Value</label>
-								<input
-									id="tier-val-{i}"
-									type="number"
-									bind:value={tier.value}
-									{disabled}
-								/>
-							</div>
-							{#if !disabled}
-								<button type="button" class="btn-row-remove" onclick={() => removeLadderTier(i)}>
-									Remove
-								</button>
-							{/if}
-						</div>
-					{/each}
-					{#if !disabled}
-						<button type="button" class="btn-add" onclick={addLadderTier}>Create Tier</button>
-					{/if}
-				</div>
+				<TE_ThresholdEditor bind:tiers={config.success_determination.threshold_ladder} {disabled} />
 			{/if}
 		</section>
 
@@ -332,55 +269,7 @@
 
 		<section class="form-section">
 			<h3>Advantage / Disadvantage</h3>
-			<div class="mechanics-table-wrap">
-				<table class="mechanics-table">
-					<thead>
-						<tr>
-							<th scope="col">Name</th>
-							<th scope="col">Mechanic Type</th>
-							{#if !disabled}
-								<th scope="col"><span class="sr-only">Actions</span></th>
-							{/if}
-						</tr>
-					</thead>
-					<tbody>
-						{#each config.advantage_disadvantage as entry, i (i)}
-							<tr>
-								<td>
-									<input
-										type="text"
-										bind:value={entry.name}
-										placeholder="Name"
-										{disabled}
-										aria-label="Mechanic name"
-									/>
-								</td>
-								<td>
-									<select bind:value={entry.mechanic_type} {disabled} aria-label="Mechanic type">
-										{#each MECHANIC_TYPE_OPTIONS as opt}
-											<option value={opt.value}>{opt.label}</option>
-										{/each}
-									</select>
-								</td>
-								{#if !disabled}
-									<td>
-										<button
-											type="button"
-											class="btn-row-remove"
-											onclick={() => removeMechanic(i)}
-										>
-											Remove
-										</button>
-									</td>
-								{/if}
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-			{#if !disabled}
-				<button type="button" class="btn-add" onclick={addMechanic}>Create Mechanic</button>
-			{/if}
+			<TE_MechanicList bind:entries={config.advantage_disadvantage} {disabled} />
 		</section>
 
 		{#if error}
@@ -470,24 +359,6 @@
 		accent-color: var(--accent-gm, #c9a227);
 	}
 
-	.ladder-row {
-		display: grid;
-		grid-template-columns: 1fr auto auto auto;
-		gap: 0.75rem;
-		align-items: end;
-		margin-bottom: 0.75rem;
-		padding: 0.75rem;
-		border: 1px solid #e5e7eb;
-		border-radius: 8px;
-		background: #fafafa;
-	}
-
-	@media (max-width: 640px) {
-		.ladder-row {
-			grid-template-columns: 1fr;
-		}
-	}
-
 	.crit-details {
 		border: 1px solid #e5e7eb;
 		border-radius: 8px;
@@ -513,35 +384,6 @@
 		gap: 0.5rem;
 		font-size: 0.9rem;
 		font-weight: 600;
-	}
-
-	.mechanics-table-wrap {
-		overflow-x: auto;
-		margin-bottom: 0.75rem;
-	}
-
-	.mechanics-table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: 0.9rem;
-	}
-
-	.mechanics-table th,
-	.mechanics-table td {
-		padding: 0.5rem;
-		border-bottom: 1px solid #e5e7eb;
-		text-align: left;
-		vertical-align: middle;
-	}
-
-	.mechanics-table input,
-	.mechanics-table select {
-		width: 100%;
-		min-width: 8rem;
-		padding: 0.4rem 0.5rem;
-		border: 1px solid #d1d5db;
-		border-radius: 6px;
-		font: inherit;
 	}
 
 	.btn-add,

@@ -169,6 +169,7 @@
 			</div>
 		</div>
 
+		<!-- Accepted deviation: spec requests dropdown menus; collapsible details panel is intentional. -->
 		<aside class="formula-builder__tokens">
 			<details class="token-panel" bind:open={tokensOpen}>
 				<summary class="token-panel__toggle">Insert Token</summary>

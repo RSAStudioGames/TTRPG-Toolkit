@@ -16,7 +16,8 @@ const PRESET_CATEGORIES = new Set(SKILL_CATEGORY_OPTIONS.map((o) => o.value));
 
 export interface SkillFormState {
 	name: string;
-	linked_attribute_id: string;
+	/** Display name for linked-attribute combobox (resolved to ID on save). */
+	linked_attribute_name: string;
 	type: string;
 	category_preset: string;
 	category_custom: string;
@@ -41,7 +42,7 @@ export function defaultSkillConfig(type: string): SkillConfig {
 export function defaultSkillForm(type = SKILL_TYPE_BINARY): SkillFormState {
 	return {
 		name: '',
-		linked_attribute_id: '',
+		linked_attribute_name: '',
 		type,
 		category_preset: 'Combat',
 		category_custom: '',
@@ -49,12 +50,16 @@ export function defaultSkillForm(type = SKILL_TYPE_BINARY): SkillFormState {
 	};
 }
 
-export function skillToForm(skill: SkillResponse): SkillFormState {
+export function skillToForm(skill: SkillResponse, attributeNameById?: Map<string, string>): SkillFormState {
 	const cat = skill.category?.trim() ?? '';
 	const isPreset = cat !== '' && PRESET_CATEGORIES.has(cat) && cat !== SKILL_CATEGORY_CUSTOM;
+	let linkedName = '';
+	if (skill.linked_attribute_id && attributeNameById) {
+		linkedName = attributeNameById.get(skill.linked_attribute_id) ?? '';
+	}
 	return {
 		name: skill.name,
-		linked_attribute_id: skill.linked_attribute_id ?? '',
+		linked_attribute_name: linkedName,
 		type: skill.type,
 		category_preset: isPreset ? cat : cat === '' ? 'Combat' : SKILL_CATEGORY_CUSTOM,
 		category_custom: isPreset ? '' : cat,
@@ -70,9 +75,42 @@ function resolveCategory(form: SkillFormState): string | null {
 	return form.category_preset || null;
 }
 
-function optionalLinkedId(id: string): string | null {
-	const t = id.trim();
-	return t === '' ? null : t;
+export function resolveLinkedAttributeId(
+	name: string,
+	attributes: { id: string; name: string }[]
+): string | null {
+	const trimmed = name.trim();
+	if (trimmed === '') return null;
+	const match = attributes.find((a) => a.name.trim().toLowerCase() === trimmed.toLowerCase());
+	return match?.id ?? null;
+}
+
+export function applyCategoryInput(value: string, form: SkillFormState): void {
+	const trimmed = value.trim();
+	const preset = SKILL_CATEGORY_OPTIONS.find(
+		(o) => o.value.toLowerCase() === trimmed.toLowerCase()
+	);
+	if (preset) {
+		form.category_preset = preset.value;
+		if (preset.value !== SKILL_CATEGORY_CUSTOM) {
+			form.category_custom = '';
+		}
+		return;
+	}
+	if (trimmed === '') {
+		form.category_preset = 'Combat';
+		form.category_custom = '';
+		return;
+	}
+	form.category_preset = SKILL_CATEGORY_CUSTOM;
+	form.category_custom = trimmed;
+}
+
+export function categoryComboboxValue(form: SkillFormState): string {
+	if (form.category_preset === SKILL_CATEGORY_CUSTOM) {
+		return form.category_custom.trim() || SKILL_CATEGORY_CUSTOM;
+	}
+	return form.category_preset;
 }
 
 function sanitizeConfigForSubmit(skillType: string, config: SkillConfig): SkillConfig {
@@ -92,30 +130,44 @@ function sanitizeConfigForSubmit(skillType: string, config: SkillConfig): SkillC
 	return out;
 }
 
-export function formToCreatePayload(form: SkillFormState, sortOrder: number): CreateSkillPayload {
+export function formToCreatePayload(
+	form: SkillFormState,
+	sortOrder: number,
+	linkedAttributeId: string | null
+): CreateSkillPayload {
 	return {
 		name: form.name.trim(),
 		type: form.type,
-		linked_attribute_id: optionalLinkedId(form.linked_attribute_id),
+		linked_attribute_id: linkedAttributeId,
 		category: resolveCategory(form),
 		config: sanitizeConfigForSubmit(form.type, form.config),
 		sort_order: sortOrder
 	};
 }
 
-export function formToUpdatePayload(form: SkillFormState): UpdateSkillPayload {
+export function formToUpdatePayload(
+	form: SkillFormState,
+	linkedAttributeId: string | null
+): UpdateSkillPayload {
 	return {
 		name: form.name.trim(),
 		type: form.type,
-		linked_attribute_id: optionalLinkedId(form.linked_attribute_id),
+		linked_attribute_id: linkedAttributeId,
 		category: resolveCategory(form),
 		config: sanitizeConfigForSubmit(form.type, form.config)
 	};
 }
 
-export function validateSkillForm(form: SkillFormState): string | null {
+export function validateSkillForm(
+	form: SkillFormState,
+	attributes: { id: string; name: string }[]
+): string | null {
 	if (!form.name.trim()) {
 		return 'Name is required.';
+	}
+	const linkedName = form.linked_attribute_name.trim();
+	if (linkedName !== '' && resolveLinkedAttributeId(linkedName, attributes) === null) {
+		return 'Linked attribute not found';
 	}
 	if (form.type === SKILL_TYPE_MULTI_TIER) {
 		if ((form.config.tiers?.length ?? 0) === 0) {

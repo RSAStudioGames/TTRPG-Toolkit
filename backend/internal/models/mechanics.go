@@ -283,13 +283,37 @@ type ResourceConfig struct {
 	RecoverySchedules []RecoveryScheduleEntry `json:"recovery_schedules,omitempty"`
 }
 
+// AttributesConfig maps to system_mechanics.attributes_config.
+type AttributesConfig struct {
+	EnabledDerived bool `json:"enabled_derived"`
+}
+
+// SaveAttributesConfigRequest is PUT /api/systems/{id}/mechanics/attributes-config body.
+type SaveAttributesConfigRequest struct {
+	EnabledDerived bool `json:"enabled_derived"`
+}
+
+// ToAttributesConfig converts the request DTO to AttributesConfig for persistence.
+func (r SaveAttributesConfigRequest) ToAttributesConfig() AttributesConfig {
+	return AttributesConfig{EnabledDerived: r.EnabledDerived}
+}
+
 // SystemMechanics is the 1:1 mechanics row per game system.
 type SystemMechanics struct {
-	ID                    string          `json:"id" db:"id"`
-	SystemID              string          `json:"system_id" db:"system_id"`
-	ResolutionConfigJSON  json.RawMessage `json:"-" db:"resolution_config"`
-	ProgressionConfigJSON json.RawMessage `json:"-" db:"progression_config"`
+	ID                      string          `json:"id" db:"id"`
+	SystemID                string          `json:"system_id" db:"system_id"`
+	ResolutionConfigJSON    json.RawMessage `json:"-" db:"resolution_config"`
+	ProgressionConfigJSON   json.RawMessage `json:"-" db:"progression_config"`
 	ActionEconomyConfigJSON json.RawMessage `json:"-" db:"action_economy_config"`
+	AttributesConfigJSON    json.RawMessage `json:"-" db:"attributes_config"`
+}
+
+// SystemAttributeGroup is a named group for organizing attributes.
+type SystemAttributeGroup struct {
+	ID        string `json:"id" db:"id"`
+	SystemID  string `json:"system_id" db:"system_id"`
+	Name      string `json:"name" db:"name"`
+	SortOrder int    `json:"sort_order" db:"sort_order"`
 }
 
 // SystemAttribute is a definitional attribute for a system.
@@ -297,6 +321,7 @@ type SystemAttribute struct {
 	ID                string          `json:"id" db:"id"`
 	SystemID          string          `json:"system_id" db:"system_id"`
 	GroupName         *string         `json:"group_name,omitempty" db:"group_name"`
+	AttributeGroupID  *string         `json:"attribute_group_id,omitempty" db:"attribute_group_id"`
 	Name              string          `json:"name" db:"name"`
 	Type              string          `json:"type" db:"type"`
 	ConfigJSON        json.RawMessage `json:"-" db:"config"`
@@ -367,11 +392,38 @@ type MechanicsResponse struct {
 	ResolutionConfig    ResolutionConfig    `json:"resolution_config"`
 	ProgressionConfig   ProgressionConfig   `json:"progression_config"`
 	ActionEconomyConfig ActionEconomyConfig `json:"action_economy_config"`
+	AttributesConfig    AttributesConfig    `json:"attributes_config"`
+}
+
+// CreateAttributeGroupRequest is POST /api/systems/{id}/attribute-groups body.
+type CreateAttributeGroupRequest struct {
+	Name      string `json:"name" validate:"required,min=1"`
+	SortOrder int    `json:"sort_order"`
+}
+
+// UpdateAttributeGroupRequest is PUT /api/systems/{id}/attribute-groups/{groupId} body.
+type UpdateAttributeGroupRequest struct {
+	Name      *string `json:"name"`
+	SortOrder *int    `json:"sort_order"`
+}
+
+// AttributeGroupResponse is a single attribute group.
+type AttributeGroupResponse struct {
+	ID        string `json:"id"`
+	SystemID  string `json:"system_id"`
+	Name      string `json:"name"`
+	SortOrder int    `json:"sort_order"`
+}
+
+// ListAttributeGroupsResponse is GET attribute-groups payload.
+type ListAttributeGroupsResponse struct {
+	Items []AttributeGroupResponse `json:"items"`
 }
 
 // CreateAttributeRequest is POST /api/systems/{id}/attributes body.
 type CreateAttributeRequest struct {
 	GroupName         *string         `json:"group_name"`
+	AttributeGroupID  *string         `json:"attribute_group_id"`
 	ParentAttributeID *string         `json:"parent_attribute_id"`
 	Name              string          `json:"name" validate:"required,min=3"`
 	Type              string          `json:"type" validate:"required,oneof=numeric step_die descriptive rank_tier custom"`
@@ -382,6 +434,7 @@ type CreateAttributeRequest struct {
 // UpdateAttributeRequest is PUT /api/systems/{id}/attributes/{attrId} body.
 type UpdateAttributeRequest struct {
 	GroupName         *string          `json:"group_name"`
+	AttributeGroupID  *string          `json:"attribute_group_id"`
 	ParentAttributeID *string          `json:"parent_attribute_id"`
 	Name              *string          `json:"name"`
 	Type              *string          `json:"type"`
@@ -394,6 +447,7 @@ type AttributeResponse struct {
 	ID                string          `json:"id"`
 	SystemID          string          `json:"system_id"`
 	GroupName         *string         `json:"group_name,omitempty"`
+	AttributeGroupID  *string         `json:"attribute_group_id,omitempty"`
 	ParentAttributeID *string         `json:"parent_attribute_id,omitempty"`
 	Name              string          `json:"name"`
 	Type              string          `json:"type"`

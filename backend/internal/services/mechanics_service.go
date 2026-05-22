@@ -111,6 +111,21 @@ func (svc *MechanicsService) SaveActionEconomyConfig(systemID string, cfg models
 	return mechanicsRowToResponse(row)
 }
 
+func (svc *MechanicsService) SaveAttributesConfig(systemID string, cfg models.AttributesConfig) (*models.MechanicsResponse, error) {
+	if err := svc.ensureSystemExists(systemID); err != nil {
+		return nil, err
+	}
+	attrsJSON, err := models.MarshalConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	row, err := svc.repo.UpsertAttributesConfig(systemID, attrsJSON)
+	if err != nil {
+		return nil, err
+	}
+	return mechanicsRowToResponse(row)
+}
+
 func expressionLike(s string) bool {
 	s = strings.TrimSpace(s)
 	return strings.ContainsAny(s, "{}+-*/")
@@ -132,13 +147,22 @@ func mechanicsRowToResponse(row *models.SystemMechanics) (*models.MechanicsRespo
 	if err != nil {
 		return nil, err
 	}
+	attrs, err := models.UnmarshalConfig[models.AttributesConfig](row.AttributesConfigJSON)
+	if err != nil {
+		return nil, err
+	}
 	return &models.MechanicsResponse{
 		ID:                  row.ID,
 		SystemID:            row.SystemID,
 		ResolutionConfig:    res,
 		ProgressionConfig:   prog,
 		ActionEconomyConfig: action,
+		AttributesConfig:    normalizeAttributesConfig(attrs),
 	}, nil
+}
+
+func normalizeAttributesConfig(cfg models.AttributesConfig) models.AttributesConfig {
+	return cfg
 }
 
 func validateResolutionConfig(cfg *models.ResolutionConfig) error {
@@ -243,13 +267,21 @@ func (svc *MechanicsService) CreateAttribute(systemID string, req models.CreateA
 	if err := svc.validateParentAttribute(systemID, "", req.ParentAttributeID); err != nil {
 		return nil, err
 	}
+	if err := validateDerivedNoGroup(&cfg, req.AttributeGroupID); err != nil {
+		return nil, err
+	}
+	groupID, groupName, err := svc.resolveAttributeGroupName(systemID, req.AttributeGroupID)
+	if err != nil {
+		return nil, err
+	}
 	cfgJSON, err := models.MarshalConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
 	row := &models.SystemAttribute{
 		SystemID:          systemID,
-		GroupName:         req.GroupName,
+		GroupName:         groupName,
+		AttributeGroupID:  groupID,
 		ParentAttributeID: normalizeParentID(req.ParentAttributeID),
 		Name:              req.Name,
 		Type:              req.Type,
@@ -269,9 +301,6 @@ func (svc *MechanicsService) UpdateAttribute(systemID, attrID string, req models
 		return nil, err
 	}
 	row := *existing
-	if req.GroupName != nil {
-		row.GroupName = req.GroupName
-	}
 	if req.ParentAttributeID != nil {
 		row.ParentAttributeID = normalizeParentID(req.ParentAttributeID)
 	}
@@ -300,6 +329,21 @@ func (svc *MechanicsService) UpdateAttribute(systemID, attrID string, req models
 	}
 	if err := svc.validateParentAttribute(systemID, attrID, row.ParentAttributeID); err != nil {
 		return nil, err
+	}
+	groupCheckID := req.AttributeGroupID
+	if groupCheckID == nil {
+		groupCheckID = row.AttributeGroupID
+	}
+	if err := validateDerivedNoGroup(&cfg, groupCheckID); err != nil {
+		return nil, err
+	}
+	if req.AttributeGroupID != nil {
+		gid, gname, err := svc.resolveAttributeGroupName(systemID, req.AttributeGroupID)
+		if err != nil {
+			return nil, err
+		}
+		row.AttributeGroupID = gid
+		row.GroupName = gname
 	}
 	if err := svc.ensureUniqueAttributeName(systemID, row.Name, attrID); err != nil {
 		return nil, err
@@ -542,6 +586,7 @@ func attributeRowToResponse(row *models.SystemAttribute) *models.AttributeRespon
 	cfg, _ := models.UnmarshalConfig[models.AttributeConfig](row.ConfigJSON)
 	return &models.AttributeResponse{
 		ID: row.ID, SystemID: row.SystemID, GroupName: row.GroupName,
+		AttributeGroupID: row.AttributeGroupID,
 		ParentAttributeID: row.ParentAttributeID,
 		Name: row.Name, Type: row.Type, Config: cfg, SortOrder: row.SortOrder,
 	}

@@ -1,5 +1,6 @@
 import {
 	RECOVERY_TRIGGER_CUSTOM,
+	RECOVERY_TRIGGER_OPTIONS,
 	RESOURCE_FORMAT_INTEGER
 } from '$lib/constants/resourceOptions';
 import type {
@@ -91,6 +92,16 @@ export function resourceTypeLabel(type: string): string {
 		custom: 'Custom'
 	};
 	return labels[type] ?? type;
+}
+
+export function recoverySummary(config: ResourceConfig): string {
+	const schedules = config.recovery_schedules ?? [];
+	if (schedules.length === 0) return '—';
+	const labels = schedules.map((row) => {
+		const opt = RECOVERY_TRIGGER_OPTIONS.find((o) => o.value === row.trigger);
+		return opt?.label ?? row.trigger;
+	});
+	return labels.join(', ');
 }
 
 export function resourceFormatLabel(format: string): string {

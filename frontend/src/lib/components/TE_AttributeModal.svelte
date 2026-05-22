@@ -10,13 +10,9 @@
 		ATTRIBUTE_TYPE_RANK_TIER,
 		ATTRIBUTE_TYPE_STEP_DIE,
 		ATTRIBUTE_TYPE_OPTIONS,
-		CACHING_RULE_LIVE,
-		CACHING_RULE_ON_TRIGGER,
-		CACHING_RULE_OPTIONS,
 		MODIFIER_DISPLAY_OPTIONS,
 		MODIFIER_FORMULA_HELPER,
 		NUMERIC_FORMAT_OPTIONS,
-		RECALCULATE_TRIGGER_OPTIONS,
 		STEP_DIE_OPTIONS
 	} from '$lib/constants/attributeOptions';
 	import {
@@ -30,13 +26,15 @@
 		validateAttributeForm,
 		type AttributeFormState
 	} from '$lib/utils/attributeDefaults';
-	import type { AttributeResponse } from '$lib/types/mechanics';
+	import type { AttributeGroupResponse, AttributeResponse } from '$lib/types/mechanics';
 
 	interface Props {
 		open: boolean;
 		systemId: string;
 		attribute?: AttributeResponse | null;
 		siblingAttributes: AttributeResponse[];
+		attributeGroups?: AttributeGroupResponse[];
+		defaultGroupId?: string;
 		disabled?: boolean;
 		onclose: () => void;
 		onsaved?: () => void;
@@ -47,6 +45,8 @@
 		systemId,
 		attribute = null,
 		siblingAttributes,
+		attributeGroups = [],
+		defaultGroupId = '',
 		disabled = false,
 		onclose,
 		onsaved
@@ -79,17 +79,18 @@
 	const showDescriptive = $derived(form.type === ATTRIBUTE_TYPE_DESCRIPTIVE);
 	const showRankTier = $derived(form.type === ATTRIBUTE_TYPE_RANK_TIER);
 	const showCustom = $derived(form.type === ATTRIBUTE_TYPE_CUSTOM);
-	const showDerived = $derived(form.config.is_derived);
-	const showTriggers = $derived(
-		showDerived && form.config.caching_rule === CACHING_RULE_ON_TRIGGER
-	);
-
 	const minRowsForType = $derived(
 		showStepDie || showDescriptive || showRankTier ? 1 : 0
 	);
 
 	function resetForm() {
 		form = attribute ? attributeToForm(attribute) : defaultAttributeForm();
+		if (!attribute && defaultGroupId) {
+			form.attribute_group_id = defaultGroupId;
+		}
+		if (!form.config.is_derived) {
+			form.config.is_derived = false;
+		}
 		error = null;
 	}
 
@@ -97,24 +98,9 @@
 		if (open) resetForm();
 	});
 
-	$effect(() => {
-		if (form.config.is_derived && !form.config.caching_rule) {
-			form.config.caching_rule = CACHING_RULE_LIVE;
-		}
-	});
-
 	function onTypeChange(next: string) {
 		form.type = next;
 		form.config = defaultAttributeConfig(next);
-	}
-
-	function toggleTrigger(value: string, checked: boolean) {
-		const current = form.config.recalculate_triggers ?? [];
-		if (checked) {
-			form.config.recalculate_triggers = [...current, value];
-		} else {
-			form.config.recalculate_triggers = current.filter((t) => t !== value);
-		}
 	}
 
 	function addStepDie() {
@@ -154,6 +140,7 @@
 	}
 
 	async function handleSave() {
+		form.config.is_derived = false;
 		const validation = validateAttributeForm(form);
 		if (validation) {
 			error = validation;
@@ -162,13 +149,11 @@
 		saving = true;
 		error = null;
 		try {
+			const coreCount = siblingAttributes.filter((a) => !a.config.is_derived).length;
 			if (isEdit && attribute) {
 				await updateAttribute(systemId, attribute.id, formToUpdatePayload(form));
 			} else {
-				await createAttribute(
-					systemId,
-					formToCreatePayload(form, siblingAttributes.length)
-				);
+				await createAttribute(systemId, formToCreatePayload(form, coreCount));
 			}
 			onclose();
 			onsaved?.();
@@ -188,8 +173,13 @@
 		</div>
 
 		<div class="form-field">
-			<label for="attr-group">Group Name</label>
-			<input id="attr-group" type="text" bind:value={form.group_name} {disabled} />
+			<label for="attr-group">Group</label>
+			<select id="attr-group" bind:value={form.attribute_group_id} {disabled}>
+				<option value="">Ungrouped</option>
+				{#each attributeGroups as g}
+					<option value={g.id}>{g.name}</option>
+				{/each}
+			</select>
 		</div>
 
 		<div class="form-field">
@@ -372,58 +362,6 @@
 				</label>
 			{/each}
 		</fieldset>
-
-		<label class="checkbox-row">
-			<input type="checkbox" bind:checked={form.config.is_derived} {disabled} />
-			<span>Enable Derived Attributes</span>
-		</label>
-
-		{#if showDerived}
-			<TE_FormulaBuilder
-				bind:value={form.config.derivation_formula}
-				label="Derivation Formula"
-				{systemId}
-				variables={derivationVariables}
-				{disabled}
-			/>
-
-			<fieldset class="radio-group">
-				<legend>Caching</legend>
-				{#each CACHING_RULE_OPTIONS as opt}
-					<label class="radio-option">
-						<input
-							type="radio"
-							name="caching-rule"
-							value={opt.value}
-							checked={form.config.caching_rule === opt.value}
-							{disabled}
-							onchange={() => {
-								form.config.caching_rule = opt.value;
-							}}
-						/>
-						<span>{opt.label}</span>
-					</label>
-				{/each}
-			</fieldset>
-
-			{#if showTriggers}
-				<fieldset class="checkbox-group">
-					<legend>Recalculate Triggers</legend>
-					{#each RECALCULATE_TRIGGER_OPTIONS as opt}
-						<label class="checkbox-row">
-							<input
-								type="checkbox"
-								checked={(form.config.recalculate_triggers ?? []).includes(opt.value)}
-								{disabled}
-								onchange={(e) =>
-									toggleTrigger(opt.value, (e.currentTarget as HTMLInputElement).checked)}
-							/>
-							<span>{opt.label}</span>
-						</label>
-					{/each}
-				</fieldset>
-			{/if}
-		{/if}
 
 		<div class="form-field">
 			<label for="attr-parent">Parent attribute</label>

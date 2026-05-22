@@ -122,6 +122,10 @@ export interface ActionEconomyConfig {
 	tie_breaking: string;
 }
 
+export interface AttributesConfig {
+	enabled_derived: boolean;
+}
+
 /** GET /api/systems/{id}/mechanics success data */
 export interface MechanicsResponse {
 	id: string;
@@ -129,6 +133,7 @@ export interface MechanicsResponse {
 	resolution_config: ResolutionConfig;
 	progression_config: ProgressionConfig;
 	action_economy_config: ActionEconomyConfig;
+	attributes_config: AttributesConfig;
 }
 
 export interface DescriptiveMapEntry {
@@ -156,10 +161,22 @@ export interface AttributeConfig {
 	recalculate_triggers?: string[];
 }
 
+export interface AttributeGroupResponse {
+	id: string;
+	system_id: string;
+	name: string;
+	sort_order: number;
+}
+
+export interface ListAttributeGroupsResponse {
+	items: AttributeGroupResponse[];
+}
+
 export interface AttributeResponse {
 	id: string;
 	system_id: string;
 	group_name?: string | null;
+	attribute_group_id?: string | null;
 	parent_attribute_id?: string | null;
 	name: string;
 	type: string;
@@ -171,8 +188,18 @@ export interface ListAttributesResponse {
 	items: AttributeResponse[];
 }
 
+export interface CreateAttributeGroupPayload {
+	name: string;
+	sort_order: number;
+}
+
+export interface UpdateAttributeGroupPayload {
+	name?: string;
+	sort_order?: number;
+}
+
 export interface CreateAttributePayload {
-	group_name?: string | null;
+	attribute_group_id?: string | null;
 	parent_attribute_id?: string | null;
 	name: string;
 	type: string;
@@ -181,7 +208,7 @@ export interface CreateAttributePayload {
 }
 
 export interface UpdateAttributePayload {
-	group_name?: string | null;
+	attribute_group_id?: string | null;
 	parent_attribute_id?: string | null;
 	name?: string;
 	type?: string;

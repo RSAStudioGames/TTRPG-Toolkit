@@ -19,7 +19,7 @@ func NewMechanicsRepository(db *sqlx.DB) *MechanicsRepository {
 	return &MechanicsRepository{db: db}
 }
 
-const mechanicsColumns = `id, system_id, resolution_config, progression_config, action_economy_config`
+const mechanicsColumns = `id, system_id, resolution_config, progression_config, action_economy_config, attributes_config`
 
 func normalizeMechanicsJSON(row *models.SystemMechanics) {
 	if len(row.ResolutionConfigJSON) == 0 {
@@ -30,6 +30,9 @@ func normalizeMechanicsJSON(row *models.SystemMechanics) {
 	}
 	if len(row.ActionEconomyConfigJSON) == 0 {
 		row.ActionEconomyConfigJSON = models.EmptyJSONObject()
+	}
+	if len(row.AttributesConfigJSON) == 0 {
+		row.AttributesConfigJSON = models.EmptyJSONObject()
 	}
 }
 
@@ -54,8 +57,8 @@ func (r *MechanicsRepository) UpsertResolutionConfig(systemID string, resolution
 	}
 	var row models.SystemMechanics
 	q := `
-INSERT INTO system_mechanics (system_id, resolution_config, progression_config, action_economy_config)
-VALUES ($1, $2, '{}', '{}')
+INSERT INTO system_mechanics (system_id, resolution_config, progression_config, action_economy_config, attributes_config)
+VALUES ($1, $2, '{}', '{}', '{}')
 ON CONFLICT (system_id) DO UPDATE
   SET resolution_config = EXCLUDED.resolution_config
 RETURNING ` + mechanicsColumns
@@ -73,8 +76,8 @@ func (r *MechanicsRepository) UpsertProgressionConfig(systemID string, progressi
 	}
 	var row models.SystemMechanics
 	q := `
-INSERT INTO system_mechanics (system_id, resolution_config, progression_config, action_economy_config)
-VALUES ($1, '{}', $2, '{}')
+INSERT INTO system_mechanics (system_id, resolution_config, progression_config, action_economy_config, attributes_config)
+VALUES ($1, '{}', $2, '{}', '{}')
 ON CONFLICT (system_id) DO UPDATE
   SET progression_config = EXCLUDED.progression_config
 RETURNING ` + mechanicsColumns
@@ -92,12 +95,31 @@ func (r *MechanicsRepository) UpsertActionEconomyConfig(systemID string, actionJ
 	}
 	var row models.SystemMechanics
 	q := `
-INSERT INTO system_mechanics (system_id, resolution_config, progression_config, action_economy_config)
-VALUES ($1, '{}', '{}', $2)
+INSERT INTO system_mechanics (system_id, resolution_config, progression_config, action_economy_config, attributes_config)
+VALUES ($1, '{}', '{}', $2, '{}')
 ON CONFLICT (system_id) DO UPDATE
   SET action_economy_config = EXCLUDED.action_economy_config
 RETURNING ` + mechanicsColumns
 	if err := r.db.Get(&row, q, systemID, actionJSON); err != nil {
+		return nil, err
+	}
+	normalizeMechanicsJSON(&row)
+	return &row, nil
+}
+
+// UpsertAttributesConfig inserts or updates attributes_config for a system.
+func (r *MechanicsRepository) UpsertAttributesConfig(systemID string, attrsJSON json.RawMessage) (*models.SystemMechanics, error) {
+	if len(attrsJSON) == 0 {
+		attrsJSON = models.EmptyJSONObject()
+	}
+	var row models.SystemMechanics
+	q := `
+INSERT INTO system_mechanics (system_id, resolution_config, progression_config, action_economy_config, attributes_config)
+VALUES ($1, '{}', '{}', '{}', $2)
+ON CONFLICT (system_id) DO UPDATE
+  SET attributes_config = EXCLUDED.attributes_config
+RETURNING ` + mechanicsColumns
+	if err := r.db.Get(&row, q, systemID, attrsJSON); err != nil {
 		return nil, err
 	}
 	normalizeMechanicsJSON(&row)
@@ -109,7 +131,9 @@ func (r *MechanicsRepository) UpsertMechanics(_ *models.SystemMechanics) (*model
 	return nil, ErrNotFound
 }
 
-const attributeColumns = `id, system_id, group_name, name, type, config, sort_order, parent_attribute_id`
+const attributeColumns = `id, system_id, group_name, attribute_group_id, name, type, config, sort_order, parent_attribute_id`
+
+const attributeGroupColumns = `id, system_id, name, sort_order`
 
 func normalizeAttributeJSON(row *models.SystemAttribute) {
 	if len(row.ConfigJSON) == 0 {
@@ -164,11 +188,11 @@ func (r *MechanicsRepository) CreateAttribute(row *models.SystemAttribute) (*mod
 	}
 	var created models.SystemAttribute
 	q := `
-INSERT INTO system_attributes (system_id, group_name, name, type, config, sort_order, parent_attribute_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO system_attributes (system_id, group_name, attribute_group_id, name, type, config, sort_order, parent_attribute_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING ` + attributeColumns
 	if err := r.db.Get(&created, q,
-		row.SystemID, row.GroupName, row.Name, row.Type, row.ConfigJSON, row.SortOrder, row.ParentAttributeID,
+		row.SystemID, row.GroupName, row.AttributeGroupID, row.Name, row.Type, row.ConfigJSON, row.SortOrder, row.ParentAttributeID,
 	); err != nil {
 		return nil, err
 	}
@@ -184,11 +208,11 @@ func (r *MechanicsRepository) UpdateAttribute(row *models.SystemAttribute) (*mod
 	var updated models.SystemAttribute
 	q := `
 UPDATE system_attributes
-SET group_name = $3, name = $4, type = $5, config = $6, sort_order = $7, parent_attribute_id = $8
+SET group_name = $3, attribute_group_id = $4, name = $5, type = $6, config = $7, sort_order = $8, parent_attribute_id = $9
 WHERE system_id = $1 AND id = $2
 RETURNING ` + attributeColumns
 	if err := r.db.Get(&updated, q,
-		row.SystemID, row.ID, row.GroupName, row.Name, row.Type, row.ConfigJSON, row.SortOrder, row.ParentAttributeID,
+		row.SystemID, row.ID, row.GroupName, row.AttributeGroupID, row.Name, row.Type, row.ConfigJSON, row.SortOrder, row.ParentAttributeID,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
@@ -414,6 +438,109 @@ RETURNING ` + resourceColumns
 // DeleteResource removes a resource.
 func (r *MechanicsRepository) DeleteResource(systemID, resourceID string) error {
 	res, err := r.db.Exec(`DELETE FROM system_resources WHERE system_id = $1 AND id = $2`, systemID, resourceID)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// ListAttributeGroups returns groups for a system ordered by sort_order.
+func (r *MechanicsRepository) ListAttributeGroups(systemID string) ([]models.SystemAttributeGroup, error) {
+	var rows []models.SystemAttributeGroup
+	q := `SELECT ` + attributeGroupColumns + ` FROM system_attribute_groups WHERE system_id = $1 ORDER BY sort_order, name`
+	if err := r.db.Select(&rows, q, systemID); err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+// GetAttributeGroup loads one group by id.
+func (r *MechanicsRepository) GetAttributeGroup(systemID, groupID string) (*models.SystemAttributeGroup, error) {
+	var row models.SystemAttributeGroup
+	q := `SELECT ` + attributeGroupColumns + ` FROM system_attribute_groups WHERE system_id = $1 AND id = $2`
+	if err := r.db.Get(&row, q, systemID, groupID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &row, nil
+}
+
+// AttributeGroupNameExists reports duplicate group names (case-insensitive).
+func (r *MechanicsRepository) AttributeGroupNameExists(systemID, name, excludeID string) (bool, error) {
+	var exists bool
+	q := `SELECT EXISTS(
+		SELECT 1 FROM system_attribute_groups
+		WHERE system_id = $1 AND lower(name) = lower($2) AND ($3 = '' OR id::text != $3)
+	)`
+	if err := r.db.Get(&exists, q, systemID, name, excludeID); err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
+// CreateAttributeGroup inserts a new group.
+func (r *MechanicsRepository) CreateAttributeGroup(row *models.SystemAttributeGroup) (*models.SystemAttributeGroup, error) {
+	var created models.SystemAttributeGroup
+	q := `
+INSERT INTO system_attribute_groups (system_id, name, sort_order)
+VALUES ($1, $2, $3)
+RETURNING ` + attributeGroupColumns
+	if err := r.db.Get(&created, q, row.SystemID, row.Name, row.SortOrder); err != nil {
+		return nil, err
+	}
+	return &created, nil
+}
+
+// UpdateAttributeGroup updates a group row.
+func (r *MechanicsRepository) UpdateAttributeGroup(row *models.SystemAttributeGroup) (*models.SystemAttributeGroup, error) {
+	var updated models.SystemAttributeGroup
+	q := `
+UPDATE system_attribute_groups
+SET name = $3, sort_order = $4
+WHERE system_id = $1 AND id = $2
+RETURNING ` + attributeGroupColumns
+	if err := r.db.Get(&updated, q, row.SystemID, row.ID, row.Name, row.SortOrder); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &updated, nil
+}
+
+// SyncAttributeGroupNames updates group_name on all attributes in a group.
+func (r *MechanicsRepository) SyncAttributeGroupNames(systemID, groupID, name string) error {
+	_, err := r.db.Exec(
+		`UPDATE system_attributes SET group_name = $3 WHERE system_id = $1 AND attribute_group_id = $2`,
+		systemID, groupID, name,
+	)
+	return err
+}
+
+// ClearAttributeGroupMembers clears group assignment on attributes (Ungrouped).
+func (r *MechanicsRepository) ClearAttributeGroupMembers(systemID, groupID string) error {
+	_, err := r.db.Exec(
+		`UPDATE system_attributes SET attribute_group_id = NULL, group_name = NULL WHERE system_id = $1 AND attribute_group_id = $2`,
+		systemID, groupID,
+	)
+	return err
+}
+
+// DeleteAttributeGroup removes a group after clearing members.
+func (r *MechanicsRepository) DeleteAttributeGroup(systemID, groupID string) error {
+	if err := r.ClearAttributeGroupMembers(systemID, groupID); err != nil {
+		return err
+	}
+	res, err := r.db.Exec(`DELETE FROM system_attribute_groups WHERE system_id = $1 AND id = $2`, systemID, groupID)
 	if err != nil {
 		return err
 	}

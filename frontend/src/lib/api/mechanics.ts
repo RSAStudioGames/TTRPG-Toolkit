@@ -1,18 +1,23 @@
 import { apiEnvelope } from './client';
 import type {
+	AttributeGroupResponse,
 	AttributeResponse,
+	CreateAttributeGroupPayload,
 	CreateAttributePayload,
 	CreateResourcePayload,
 	CreateSkillPayload,
+	ListAttributeGroupsResponse,
 	ListAttributesResponse,
 	ListResourcesResponse,
 	ListSkillsResponse,
 	ActionEconomyConfig,
+	AttributesConfig,
 	MechanicsResponse,
 	ProgressionConfig,
 	ResolutionConfig,
 	ResourceResponse,
 	SkillResponse,
+	UpdateAttributeGroupPayload,
 	UpdateAttributePayload,
 	UpdateResourcePayload,
 	UpdateSkillPayload,
@@ -41,6 +46,40 @@ export async function saveResolutionConfig(
 		method: 'PUT',
 		body: JSON.stringify(body)
 	});
+}
+
+export async function listAttributeGroups(
+	systemId: string
+): Promise<ListAttributeGroupsResponse> {
+	return apiEnvelope<ListAttributeGroupsResponse>(`/api/systems/${systemId}/attribute-groups`);
+}
+
+export async function createAttributeGroup(
+	systemId: string,
+	body: CreateAttributeGroupPayload
+): Promise<AttributeGroupResponse> {
+	return apiEnvelope<AttributeGroupResponse>(`/api/systems/${systemId}/attribute-groups`, {
+		method: 'POST',
+		body: JSON.stringify(body)
+	});
+}
+
+export async function updateAttributeGroup(
+	systemId: string,
+	groupId: string,
+	body: UpdateAttributeGroupPayload
+): Promise<AttributeGroupResponse> {
+	return apiEnvelope<AttributeGroupResponse>(
+		`/api/systems/${systemId}/attribute-groups/${groupId}`,
+		{ method: 'PUT', body: JSON.stringify(body) }
+	);
+}
+
+export async function deleteAttributeGroup(systemId: string, groupId: string): Promise<void> {
+	await apiEnvelope<{ deleted: string }>(
+		`/api/systems/${systemId}/attribute-groups/${groupId}`,
+		{ method: 'DELETE' }
+	);
 }
 
 export async function listAttributes(systemId: string): Promise<ListAttributesResponse> {
@@ -129,6 +168,16 @@ export async function saveActionEconomyConfig(
 	body: ActionEconomyConfig
 ): Promise<MechanicsResponse> {
 	return apiEnvelope<MechanicsResponse>(`/api/systems/${systemId}/mechanics/action-economy`, {
+		method: 'PUT',
+		body: JSON.stringify(body)
+	});
+}
+
+export async function saveAttributesConfig(
+	systemId: string,
+	body: AttributesConfig
+): Promise<MechanicsResponse> {
+	return apiEnvelope<MechanicsResponse>(`/api/systems/${systemId}/mechanics/attributes-config`, {
 		method: 'PUT',
 		body: JSON.stringify(body)
 	});

@@ -3,7 +3,11 @@
 	import TE_ResourceModal from './TE_ResourceModal.svelte';
 	import { deleteResource, listResources } from '$lib/api/mechanics';
 	import { ApiError } from '$lib/api/client';
-	import { resourceFormatLabel, resourceTypeLabel } from '$lib/utils/resourceDefaults';
+	import {
+		recoverySummary,
+		resourceFormatLabel,
+		resourceTypeLabel
+	} from '$lib/utils/resourceDefaults';
 	import type { ResourceResponse } from '$lib/types/mechanics';
 
 	interface Props {
@@ -91,6 +95,7 @@
 						<th>Name</th>
 						<th>Type</th>
 						<th>Format</th>
+						<th>Recovery</th>
 						<th class="col-actions">Actions</th>
 					</tr>
 				</thead>
@@ -100,6 +105,7 @@
 							<td>{resource.name}</td>
 							<td>{resourceTypeLabel(resource.type)}</td>
 							<td>{resourceFormatLabel(resource.config.current_max_format)}</td>
+							<td>{recoverySummary(resource.config)}</td>
 							<td class="col-actions">
 								<button
 									type="button"

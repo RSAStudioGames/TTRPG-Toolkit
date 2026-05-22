@@ -43,6 +43,118 @@
 	}: Props = $props();
 
 	let expanded = $state<Set<number>>(new Set());
+	let fileInput: HTMLInputElement | undefined = $state();
+	let importMessage = $state<string | null>(null);
+
+	function parseCsvLine(line: string): string[] {
+		const out: string[] = [];
+		let cur = '';
+		let inQuotes = false;
+		for (let i = 0; i < line.length; i++) {
+			const ch = line[i];
+			if (ch === '"') {
+				if (inQuotes && line[i + 1] === '"') {
+					cur += '"';
+					i++;
+				} else {
+					inQuotes = !inQuotes;
+				}
+				continue;
+			}
+			if (ch === ',' && !inQuotes) {
+				out.push(cur.trim());
+				cur = '';
+				continue;
+			}
+			cur += ch;
+		}
+		out.push(cur.trim());
+		return out;
+	}
+
+	function parseCsv(text: string): string[][] {
+		return text
+			.replace(/\r\n/g, '\n')
+			.replace(/\r/g, '\n')
+			.split('\n')
+			.map((line) => line.trim())
+			.filter((line) => line.length > 0)
+			.map(parseCsvLine);
+	}
+
+	function importCsv(text: string) {
+		importMessage = null;
+		const parsed = parseCsv(text);
+		if (parsed.length < 2) {
+			importMessage = 'CSV must include a header row and at least one data row.';
+			return;
+		}
+		const headers = parsed[0].map((h) => h.toLowerCase());
+		const colIndex = new Map<string, number>();
+		for (const col of columns) {
+			const idx = headers.indexOf(col.key.toLowerCase());
+			if (idx < 0) {
+				importMessage = `Missing column "${col.key}" in CSV header.`;
+				return;
+			}
+			colIndex.set(col.key, idx);
+		}
+
+		let imported = 0;
+		let skipped = 0;
+		const next = [...rows];
+		for (let r = 1; r < parsed.length; r++) {
+			const cells = parsed[r];
+			const row: Record<string, string | number> = {};
+			let valid = true;
+			for (const col of columns) {
+				const idx = colIndex.get(col.key)!;
+				const raw = cells[idx] ?? '';
+				if (col.type === 'number') {
+					const n = Number(raw);
+					if (raw === '' || !Number.isFinite(n)) {
+						valid = false;
+						break;
+					}
+					row[col.key] = n;
+				} else {
+					row[col.key] = raw;
+				}
+			}
+			if (valid) {
+				next.push(row);
+				imported++;
+			} else {
+				skipped++;
+			}
+		}
+		rows = next;
+		if (skipped > 0) {
+			importMessage = `Imported ${imported} rows; skipped ${skipped} invalid rows.`;
+		} else if (imported > 0) {
+			importMessage = `Imported ${imported} rows.`;
+		} else {
+			importMessage = 'No valid rows to import.';
+		}
+	}
+
+	function triggerImport() {
+		fileInput?.click();
+	}
+
+	function onFileSelected(e: Event) {
+		const input = e.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		input.value = '';
+		if (!file) return;
+		const reader = new FileReader();
+		reader.onload = () => {
+			if (typeof reader.result === 'string') {
+				importCsv(reader.result);
+			}
+		};
+		reader.readAsText(file);
+	}
 
 	const colSpan = $derived(
 		columns.length + (expandable ? 1 : 0) + (onremove && !disabled ? 1 : 0)
@@ -177,8 +289,25 @@
 			</tbody>
 		</table>
 	</div>
-	{#if onadd && !disabled}
-		<button type="button" class="btn-add" onclick={onadd}>{addLabel}</button>
+	{#if !disabled}
+		<div class="table-actions">
+			{#if onadd}
+				<button type="button" class="btn-add" onclick={onadd}>{addLabel}</button>
+			{/if}
+			<button type="button" class="btn-add" onclick={triggerImport}>Import CSV</button>
+			<input
+				bind:this={fileInput}
+				type="file"
+				accept=".csv,text/csv"
+				class="sr-only"
+				aria-hidden="true"
+				tabindex={-1}
+				onchange={onFileSelected}
+			/>
+		</div>
+		{#if importMessage}
+			<p class="import-msg">{importMessage}</p>
+		{/if}
 	{/if}
 </div>
 
@@ -236,8 +365,19 @@
 		padding: 0.75rem 1rem;
 	}
 
+	.table-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.import-msg {
+		margin: 0;
+		font-size: 0.85rem;
+		color: var(--text-muted, #6b7280);
+	}
+
 	.btn-add {
-		align-self: flex-start;
 		padding: 0.35rem 0.75rem;
 		font-size: 0.85rem;
 		border: 1px solid #d1d5db;

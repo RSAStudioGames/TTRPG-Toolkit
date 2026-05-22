@@ -22,3 +22,16 @@ func (s *FormulaService) ValidateFormula(formula string) (bool, []string) {
 	}
 	return true, nil
 }
+
+// Evaluate parses, validates, and evaluates a formula with the given variables.
+func (s *FormulaService) Evaluate(
+	formula string,
+	vars map[string]float64,
+	rng formulapkg.RandSource,
+) (float64, error) {
+	f, err := formulapkg.Parse(strings.TrimSpace(formula))
+	if err != nil {
+		return 0, err
+	}
+	return formulapkg.Eval(f.Expr, vars, rng)
+}

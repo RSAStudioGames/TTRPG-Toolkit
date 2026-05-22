@@ -1,5 +1,6 @@
 <script lang="ts">
 	import BaseModal from './BaseModal.svelte';
+	import Combobox from './Combobox.svelte';
 	import { createSkill, updateSkill } from '$lib/api/mechanics';
 	import { ApiError } from '$lib/api/client';
 	import {
@@ -11,10 +12,13 @@
 		SPECIALIZATION_EXAMPLES_HELPER
 	} from '$lib/constants/skillOptions';
 	import {
+		applyCategoryInput,
+		categoryComboboxValue,
 		defaultSkillConfig,
 		defaultSkillForm,
 		formToCreatePayload,
 		formToUpdatePayload,
+		resolveLinkedAttributeId,
 		skillToForm,
 		validateSkillForm,
 		type SkillFormState
@@ -44,6 +48,7 @@
 	}: Props = $props();
 
 	let form = $state<SkillFormState>(defaultSkillForm());
+	let categoryInput = $state('');
 	let saving = $state(false);
 	let error = $state<string | null>(null);
 
@@ -55,13 +60,26 @@
 	const showSpecializationBonus = $derived(form.config.allow_specializations);
 	const minTierRows = $derived(showMultiTier ? 1 : 0);
 
+	const attributeNames = $derived(
+		[...attributes].map((a) => a.name).sort((a, b) => a.localeCompare(b))
+	);
+	const categoryOptions = $derived(SKILL_CATEGORY_OPTIONS.map((o) => o.label));
+
+	const attributeNameById = $derived(new Map(attributes.map((a) => [a.id, a.name])));
+
 	function resetForm() {
-		form = skill ? skillToForm(skill) : defaultSkillForm();
+		form = skill ? skillToForm(skill, attributeNameById) : defaultSkillForm();
+		categoryInput = categoryComboboxValue(form);
 		error = null;
 	}
 
 	$effect(() => {
 		if (open) resetForm();
+	});
+
+	$effect(() => {
+		if (!open) return;
+		applyCategoryInput(categoryInput, form);
 	});
 
 	function onTypeChange(next: string) {
@@ -80,18 +98,20 @@
 	}
 
 	async function handleSave() {
-		const validation = validateSkillForm(form);
+		applyCategoryInput(categoryInput, form);
+		const validation = validateSkillForm(form, attributes);
 		if (validation) {
 			error = validation;
 			return;
 		}
+		const linkedId = resolveLinkedAttributeId(form.linked_attribute_name, attributes);
 		saving = true;
 		error = null;
 		try {
 			if (isEdit && skill) {
-				await updateSkill(systemId, skill.id, formToUpdatePayload(form));
+				await updateSkill(systemId, skill.id, formToUpdatePayload(form, linkedId));
 			} else {
-				await createSkill(systemId, formToCreatePayload(form, siblingSkillCount));
+				await createSkill(systemId, formToCreatePayload(form, siblingSkillCount, linkedId));
 			}
 			onclose();
 			onsaved?.();
@@ -110,15 +130,13 @@
 			<input id="skill-name" type="text" bind:value={form.name} {disabled} required />
 		</div>
 
-		<div class="form-field">
-			<label for="skill-linked-attr">Linked Attribute</label>
-			<select id="skill-linked-attr" bind:value={form.linked_attribute_id} {disabled}>
-				<option value="">None</option>
-				{#each attributes as attr}
-					<option value={attr.id}>{attr.name}</option>
-				{/each}
-			</select>
-		</div>
+		<Combobox
+			label="Linked Attribute"
+			placeholder="Select attribute…"
+			options={attributeNames}
+			bind:value={form.linked_attribute_name}
+			{disabled}
+		/>
 
 		<div class="form-field">
 			<label for="skill-type">Rating Type</label>
@@ -184,14 +202,13 @@
 			</div>
 		{/if}
 
-		<div class="form-field">
-			<label for="skill-category">Category</label>
-			<select id="skill-category" bind:value={form.category_preset} {disabled}>
-				{#each SKILL_CATEGORY_OPTIONS as opt}
-					<option value={opt.value}>{opt.label}</option>
-				{/each}
-			</select>
-		</div>
+		<Combobox
+			label="Category"
+			placeholder="Select category…"
+			options={categoryOptions}
+			bind:value={categoryInput}
+			{disabled}
+		/>
 
 		{#if showCustomCategory}
 			<div class="form-field">

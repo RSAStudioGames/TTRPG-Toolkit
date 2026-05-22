@@ -132,6 +132,21 @@ func (h *MechanicsHandler) SaveProgressionConfig(c *fiber.Ctx) error {
 	return WriteSuccess(c, resp)
 }
 
+func (h *MechanicsHandler) SaveAttributesConfig(c *fiber.Ctx) error {
+	if h.svc == nil {
+		return WriteError(c, fiber.StatusInternalServerError, "Mechanics unavailable", nil)
+	}
+	var req models.SaveAttributesConfigRequest
+	if err := c.BodyParser(&req); err != nil {
+		return WriteError(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+	resp, err := h.svc.SaveAttributesConfig(c.Params("id"), req.ToAttributesConfig())
+	if err != nil {
+		return h.mechanicsServiceError(c, err)
+	}
+	return WriteSuccess(c, resp)
+}
+
 func (h *MechanicsHandler) SaveActionEconomyConfig(c *fiber.Ctx) error {
 	if h.svc == nil {
 		return WriteError(c, fiber.StatusInternalServerError, "Mechanics unavailable", nil)
@@ -152,6 +167,60 @@ func (h *MechanicsHandler) SaveActionEconomyConfig(c *fiber.Ctx) error {
 
 func (h *MechanicsHandler) UpsertMechanics(c *fiber.Ctx) error {
 	return h.placeholder(c, "Mechanics")
+}
+
+func (h *MechanicsHandler) ListAttributeGroups(c *fiber.Ctx) error {
+	if h.svc == nil {
+		return WriteError(c, fiber.StatusInternalServerError, "Mechanics unavailable", nil)
+	}
+	resp, err := h.svc.ListAttributeGroups(c.Params("id"))
+	if err != nil {
+		return h.mechanicsServiceError(c, err)
+	}
+	return WriteSuccess(c, resp)
+}
+
+func (h *MechanicsHandler) CreateAttributeGroup(c *fiber.Ctx) error {
+	if h.svc == nil {
+		return WriteError(c, fiber.StatusInternalServerError, "Mechanics unavailable", nil)
+	}
+	var req models.CreateAttributeGroupRequest
+	if err := c.BodyParser(&req); err != nil {
+		return WriteError(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+	if errs := ValidateStruct(req); len(errs) > 0 {
+		return WriteError(c, fiber.StatusBadRequest, "Validation failed", errs)
+	}
+	resp, err := h.svc.CreateAttributeGroup(c.Params("id"), req)
+	if err != nil {
+		return h.mechanicsServiceError(c, err)
+	}
+	return WriteSuccess(c, resp)
+}
+
+func (h *MechanicsHandler) UpdateAttributeGroup(c *fiber.Ctx) error {
+	if h.svc == nil {
+		return WriteError(c, fiber.StatusInternalServerError, "Mechanics unavailable", nil)
+	}
+	var req models.UpdateAttributeGroupRequest
+	if err := c.BodyParser(&req); err != nil {
+		return WriteError(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+	resp, err := h.svc.UpdateAttributeGroup(c.Params("id"), c.Params("groupId"), req)
+	if err != nil {
+		return h.mechanicsServiceError(c, err)
+	}
+	return WriteSuccess(c, resp)
+}
+
+func (h *MechanicsHandler) DeleteAttributeGroup(c *fiber.Ctx) error {
+	if h.svc == nil {
+		return WriteError(c, fiber.StatusInternalServerError, "Mechanics unavailable", nil)
+	}
+	if err := h.svc.DeleteAttributeGroup(c.Params("id"), c.Params("groupId")); err != nil {
+		return h.mechanicsServiceError(c, err)
+	}
+	return WriteSuccess(c, map[string]string{"deleted": c.Params("groupId")})
 }
 
 func (h *MechanicsHandler) ListAttributes(c *fiber.Ctx) error {

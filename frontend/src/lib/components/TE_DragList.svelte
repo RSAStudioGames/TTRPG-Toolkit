@@ -13,12 +13,13 @@
 	interface Props {
 		items: DragListItem[];
 		disabled?: boolean;
+		renderBody?: Snippet<[string]>;
 		onReorder?: (items: DragListItem[]) => void;
 		onEdit?: (id: string) => void;
 		onDelete?: (id: string) => void;
 	}
 
-	let { items, disabled = false, onReorder, onEdit, onDelete }: Props = $props();
+	let { items, disabled = false, renderBody, onReorder, onEdit, onDelete }: Props = $props();
 
 	let dragId = $state<string | null>(null);
 	let dropTargetId = $state<string | null>(null);
@@ -164,6 +165,10 @@
 				{#if item.body}
 					<div class="drag-card__body">
 						{@render item.body()}
+					</div>
+				{:else if renderBody}
+					<div class="drag-card__body">
+						{@render renderBody(item.id)}
 					</div>
 				{:else if item.summary}
 					<div class="drag-card__body">
