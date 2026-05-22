@@ -1,0 +1,24 @@
+package services
+
+import (
+	"strings"
+
+	formulapkg "github.com/gabriel/ttrpg-toolkit/backend/pkg/formula"
+)
+
+// FormulaService validates formula syntax using the shared parser package.
+type FormulaService struct{}
+
+// NewFormulaService returns a stateless formula validation service.
+func NewFormulaService() *FormulaService {
+	return &FormulaService{}
+}
+
+// ValidateFormula parses the formula into an AST and returns syntax/semantic errors.
+func (s *FormulaService) ValidateFormula(formula string) (bool, []string) {
+	_, err := formulapkg.Parse(strings.TrimSpace(formula))
+	if err != nil {
+		return false, formulapkg.FormatErrors(err)
+	}
+	return true, nil
+}
