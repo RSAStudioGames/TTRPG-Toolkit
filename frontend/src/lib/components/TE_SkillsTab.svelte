@@ -9,9 +9,14 @@
 	interface Props {
 		systemId: string;
 		disabled?: boolean;
+		onModalOpenChange?: (open: boolean) => void;
 	}
 
-	let { systemId, disabled = false }: Props = $props();
+	let { systemId, disabled = false, onModalOpenChange }: Props = $props();
+
+	export function closeModalDiscard() {
+		closeModal();
+	}
 
 	let skills = $state<SkillResponse[]>([]);
 	let attributes = $state<AttributeResponse[]>([]);
@@ -75,6 +80,10 @@
 			error = e instanceof ApiError ? e.message : 'Failed to delete skill';
 		}
 	}
+
+	$effect(() => {
+		onModalOpenChange?.(modalOpen);
+	});
 
 	onMount(() => {
 		load();

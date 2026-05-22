@@ -24,9 +24,10 @@
 	interface Props {
 		systemId: string;
 		disabled?: boolean;
+		onDirtyChange?: (dirty: boolean) => void;
 	}
 
-	let { systemId, disabled = false }: Props = $props();
+	let { systemId, disabled = false, onDirtyChange }: Props = $props();
 
 	let config = $state<ResolutionConfig>(defaultResolutionConfig());
 	let loading = $state(true);
@@ -34,6 +35,11 @@
 	let error = $state<string | null>(null);
 	let saveMessage = $state<string | null>(null);
 	let validationErrors = $state<string[]>([]);
+	let savedSnapshot = $state('');
+
+	function markDirty() {
+		onDirtyChange?.(JSON.stringify(config) !== savedSnapshot);
+	}
 
 	const formulaVariables = $derived.by(() => {
 		const names = new Set<string>(['modifier', 'target']);
@@ -69,9 +75,13 @@
 		try {
 			const data = await getMechanics(systemId);
 			config = normalizeResolutionConfig(data.resolution_config);
+			savedSnapshot = JSON.stringify(config);
+			onDirtyChange?.(false);
 		} catch (e) {
 			if (e instanceof ApiError && e.status === 404) {
 				config = defaultResolutionConfig();
+				savedSnapshot = JSON.stringify(config);
+				onDirtyChange?.(false);
 			} else {
 				error = e instanceof ApiError ? e.message : 'Failed to load resolution settings';
 			}
@@ -88,6 +98,8 @@
 		try {
 			const data = await saveResolutionConfig(systemId, config);
 			config = normalizeResolutionConfig(data.resolution_config);
+			savedSnapshot = JSON.stringify(config);
+			onDirtyChange?.(false);
 			saveMessage = 'Resolution settings saved.';
 		} catch (e) {
 			if (e instanceof ApiError) {
@@ -123,6 +135,11 @@
 	function removeMechanic(index: number) {
 		config.advantage_disadvantage = config.advantage_disadvantage.filter((_, i) => i !== index);
 	}
+
+	$effect(() => {
+		if (loading) return;
+		markDirty();
+	});
 
 	onMount(() => {
 		load();

@@ -7,6 +7,7 @@
 	import SystemSaveTemplateModal from './SystemSaveTemplateModal.svelte';
 	import TE_AttributesTab from './TE_AttributesTab.svelte';
 	import TE_ResolutionTab from './TE_ResolutionTab.svelte';
+	import TE_ActionEconomyTab from './TE_ActionEconomyTab.svelte';
 	import TE_ProgressionTab from './TE_ProgressionTab.svelte';
 	import TE_ResourcesTab from './TE_ResourcesTab.svelte';
 	import TE_SkillsTab from './TE_SkillsTab.svelte';
@@ -58,11 +59,80 @@
 
 	type OverlayTabId = (typeof OVERLAY_TABS)[number]['id'];
 
-	const TAB_PLACEHOLDERS: Partial<Record<OverlayTabId, string>> = {
-		action_economy: 'Coming in Step 10.'
-	};
-
 	let activeTab = $state<OverlayTabId>('identity');
+
+	let tabDirty = $state<Partial<Record<OverlayTabId, boolean>>>({});
+	let modalOpenByTab = $state({
+		attributes: false,
+		skills: false,
+		resources: false
+	});
+
+	let attributesTab = $state<{ closeModalDiscard: () => void } | undefined>();
+	let skillsTab = $state<{ closeModalDiscard: () => void } | undefined>();
+	let resourcesTab = $state<{ closeModalDiscard: () => void } | undefined>();
+
+	function setTabDirty(tab: OverlayTabId, dirty: boolean) {
+		tabDirty = { ...tabDirty, [tab]: dirty };
+	}
+
+	function modalOpenOnTab(tab: OverlayTabId): boolean {
+		if (tab === 'attributes') return modalOpenByTab.attributes;
+		if (tab === 'skills') return modalOpenByTab.skills;
+		if (tab === 'resources') return modalOpenByTab.resources;
+		return false;
+	}
+
+	function closeModalOnTab(tab: OverlayTabId) {
+		if (tab === 'attributes') attributesTab?.closeModalDiscard();
+		else if (tab === 'skills') skillsTab?.closeModalDiscard();
+		else if (tab === 'resources') resourcesTab?.closeModalDiscard();
+	}
+
+	function tabHasUnsavedDirty(tab: OverlayTabId): boolean {
+		if (tab === 'identity') return editing;
+		return tabDirty[tab] === true;
+	}
+
+	function confirmLeaveCurrentTab(): boolean {
+		if (modalOpenOnTab(activeTab)) {
+			return confirm('You have unsaved changes in the open form. Leave without saving?');
+		}
+		if (tabHasUnsavedDirty(activeTab)) {
+			return confirm('You have unsaved changes. Leave without saving?');
+		}
+		return true;
+	}
+
+	function trySwitchTab(next: OverlayTabId) {
+		if (next === activeTab) return;
+		if (!confirmLeaveCurrentTab()) return;
+		if (modalOpenOnTab(activeTab)) {
+			closeModalOnTab(activeTab);
+		}
+		activeTab = next;
+	}
+
+	function confirmCloseOverlay(): boolean {
+		if (modalOpenOnTab(activeTab)) {
+			if (!confirm('You have unsaved changes in the open form. Leave without saving?')) {
+				return false;
+			}
+			closeModalOnTab(activeTab);
+		}
+		if (editing && !confirm('You have unsaved changes. Leave without saving?')) {
+			return false;
+		}
+		for (const tab of OVERLAY_TABS) {
+			if (tab.id !== 'identity' && tabDirty[tab.id]) {
+				if (!confirm('You have unsaved changes. Leave without saving?')) {
+					return false;
+				}
+				break;
+			}
+		}
+		return true;
+	}
 
 	const readOnly = $derived(
 		system != null && (system.status === 'locked' || system.status === 'archived')
@@ -82,12 +152,13 @@
 			editing = false;
 			error = null;
 			activeTab = 'identity';
+			tabDirty = {};
+			modalOpenByTab = { attributes: false, skills: false, resources: false };
 		}
 	});
 
-	const activePlaceholder = $derived(TAB_PLACEHOLDERS[activeTab] ?? null);
-
 	function close() {
+		if (!confirmCloseOverlay()) return;
 		system = null;
 		onclose();
 	}
@@ -191,7 +262,7 @@
 					class="overlay-tab"
 					class:active={activeTab === tab.id}
 					aria-selected={activeTab === tab.id}
-					onclick={() => (activeTab = tab.id)}
+					onclick={() => trySwitchTab(tab.id)}
 				>
 					{tab.label}
 				</button>
@@ -255,17 +326,50 @@
 					{/if}
 				{/if}
 			{:else if activeTab === 'resolution'}
-				<TE_ResolutionTab systemId={system.id} disabled={readOnly} />
+				<TE_ResolutionTab
+					systemId={system.id}
+					disabled={readOnly}
+					onDirtyChange={(d) => setTabDirty('resolution', d)}
+				/>
 			{:else if activeTab === 'attributes'}
-				<TE_AttributesTab systemId={system.id} disabled={readOnly} />
+				<TE_AttributesTab
+					bind:this={attributesTab}
+					systemId={system.id}
+					disabled={readOnly}
+					onModalOpenChange={(open) => {
+						modalOpenByTab = { ...modalOpenByTab, attributes: open };
+					}}
+				/>
 			{:else if activeTab === 'skills'}
-				<TE_SkillsTab systemId={system.id} disabled={readOnly} />
+				<TE_SkillsTab
+					bind:this={skillsTab}
+					systemId={system.id}
+					disabled={readOnly}
+					onModalOpenChange={(open) => {
+						modalOpenByTab = { ...modalOpenByTab, skills: open };
+					}}
+				/>
 			{:else if activeTab === 'progression'}
-				<TE_ProgressionTab systemId={system.id} disabled={readOnly} />
+				<TE_ProgressionTab
+					systemId={system.id}
+					disabled={readOnly}
+					onDirtyChange={(d) => setTabDirty('progression', d)}
+				/>
 			{:else if activeTab === 'resources'}
-				<TE_ResourcesTab systemId={system.id} disabled={readOnly} />
-			{:else if activePlaceholder}
-				<p class="tab-placeholder">{activePlaceholder}</p>
+				<TE_ResourcesTab
+					bind:this={resourcesTab}
+					systemId={system.id}
+					disabled={readOnly}
+					onModalOpenChange={(open) => {
+						modalOpenByTab = { ...modalOpenByTab, resources: open };
+					}}
+				/>
+			{:else if activeTab === 'action_economy'}
+				<TE_ActionEconomyTab
+					systemId={system.id}
+					disabled={readOnly}
+					onDirtyChange={(d) => setTabDirty('action_economy', d)}
+				/>
 			{/if}
 		</div>
 
@@ -401,9 +505,4 @@
 		min-height: 8rem;
 	}
 
-	.tab-placeholder {
-		color: #6b7280;
-		font-size: 0.9rem;
-		margin: 1rem 0;
-	}
 </style>

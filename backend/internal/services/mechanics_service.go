@@ -78,6 +78,44 @@ func (svc *MechanicsService) SaveProgressionConfig(systemID string, cfg models.P
 	return mechanicsRowToResponse(row)
 }
 
+func (svc *MechanicsService) SaveActionEconomyConfig(systemID string, cfg models.ActionEconomyConfig) (*models.MechanicsResponse, error) {
+	if err := svc.ensureSystemExists(systemID); err != nil {
+		return nil, err
+	}
+	sanitizeActionEconomyConfig(&cfg)
+	if err := validateActionEconomyConfig(&cfg); err != nil {
+		return nil, err
+	}
+	if svc.formula != nil {
+		if initiativeNeedsFormula(cfg.InitiativeSystem) {
+			valid, errs := svc.formula.ValidateFormula(cfg.InitiativeExpression)
+			if !valid {
+				return nil, &InvalidFormulaError{Errors: errs}
+			}
+		}
+		if cfg.InitiativeSystem == models.InitiativeSystemStatic && expressionLike(cfg.StaticInitiativeValue) {
+			valid, errs := svc.formula.ValidateFormula(cfg.StaticInitiativeValue)
+			if !valid {
+				return nil, &InvalidFormulaError{Errors: errs}
+			}
+		}
+	}
+	actionJSON, err := models.MarshalConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	row, err := svc.repo.UpsertActionEconomyConfig(systemID, actionJSON)
+	if err != nil {
+		return nil, err
+	}
+	return mechanicsRowToResponse(row)
+}
+
+func expressionLike(s string) bool {
+	s = strings.TrimSpace(s)
+	return strings.ContainsAny(s, "{}+-*/")
+}
+
 func mechanicsRowToResponse(row *models.SystemMechanics) (*models.MechanicsResponse, error) {
 	if row == nil {
 		return nil, nil

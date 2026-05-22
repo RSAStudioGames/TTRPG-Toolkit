@@ -12,6 +12,7 @@ export {
 	listAttributes,
 	listResources,
 	listSkills,
+	saveActionEconomyConfig,
 	saveProgressionConfig,
 	saveResolutionConfig,
 	updateAttribute,

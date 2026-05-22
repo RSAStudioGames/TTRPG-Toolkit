@@ -122,8 +122,108 @@ func (r SaveProgressionConfigRequest) ToProgressionConfig() ProgressionConfig {
 	}
 }
 
+// ActionCostEntry is one row in the action point cost table.
+type ActionCostEntry struct {
+	Name string `json:"name"`
+	Cost int    `json:"cost"`
+}
+
+// ActionComboEntry links named actions into a combo.
+type ActionComboEntry struct {
+	ComboName      string   `json:"combo_name"`
+	ComponentNames []string `json:"component_names"`
+}
+
+// PointPoolConfig is the action point pool paradigm.
+type PointPoolConfig struct {
+	PointsPerPool   int               `json:"points_per_pool"`
+	RefreshScope    string            `json:"refresh_scope"`
+	ActionCostTable []ActionCostEntry `json:"action_cost_table,omitempty"`
+}
+
+// ActionSlotEntry is one action type slot definition.
+type ActionSlotEntry struct {
+	Name              string             `json:"name"`
+	Allowance         int                `json:"allowance"`
+	AllowanceScope    string             `json:"allowance_scope,omitempty"`
+	CarryOver         string             `json:"carry_over"`
+	ConvertTarget     string             `json:"convert_target,omitempty"`
+	IsReaction        bool               `json:"is_reaction"`
+	ReactionTrigger   string             `json:"reaction_trigger,omitempty"`
+	IsFreeAction      bool               `json:"is_free_action"`
+	FreeActionLimits  string             `json:"free_action_limits,omitempty"`
+	InterruptionRules string             `json:"interruption_rules,omitempty"`
+	DelayReadyRules   string             `json:"delay_ready_rules,omitempty"`
+	Combos            []ActionComboEntry `json:"combos,omitempty"`
+}
+
+// TokenTurnConfig is used when turn_structure is token_based.
+type TokenTurnConfig struct {
+	TokensPerRound int    `json:"tokens_per_round"`
+	RefreshOn      string `json:"refresh_on"`
+}
+
 // ActionEconomyConfig maps to system_mechanics.action_economy_config.
-type ActionEconomyConfig struct{}
+type ActionEconomyConfig struct {
+	TurnStructure             string            `json:"turn_structure"`
+	CustomTurnStructureName   string            `json:"custom_turn_structure_name,omitempty"`
+	TokenTurn                 *TokenTurnConfig  `json:"token_turn,omitempty"`
+	SystemType                string            `json:"system_type"`
+	PointPool                 PointPoolConfig   `json:"point_pool,omitempty"`
+	ActionSlots               []ActionSlotEntry `json:"action_slots,omitempty"`
+	RoundTimeDefinition       string            `json:"round_time_definition"`
+	CustomRoundTimeDefinition string            `json:"custom_round_time_definition,omitempty"`
+	CombatTimeTrackingMode    string            `json:"combat_time_tracking_mode"`
+	TimeEscalationRules       string            `json:"time_escalation_rules,omitempty"`
+	InitiativeSystem          string            `json:"initiative_system"`
+	InitiativePersistence     string            `json:"initiative_persistence"`
+	InitiativeExpression      string            `json:"initiative_expression,omitempty"`
+	StaticInitiativeValue       string            `json:"static_initiative_value,omitempty"`
+	InitiativeModifiers         string            `json:"initiative_modifiers,omitempty"`
+	TieBreaking                 string            `json:"tie_breaking"`
+}
+
+// SaveActionEconomyConfigRequest is PUT /api/systems/{id}/mechanics/action-economy body.
+type SaveActionEconomyConfigRequest struct {
+	TurnStructure             string            `json:"turn_structure" validate:"required"`
+	CustomTurnStructureName   string            `json:"custom_turn_structure_name,omitempty"`
+	TokenTurn                 *TokenTurnConfig  `json:"token_turn,omitempty"`
+	SystemType                string            `json:"system_type" validate:"required"`
+	PointPool                 PointPoolConfig   `json:"point_pool"`
+	ActionSlots               []ActionSlotEntry `json:"action_slots"`
+	RoundTimeDefinition       string            `json:"round_time_definition" validate:"required"`
+	CustomRoundTimeDefinition string            `json:"custom_round_time_definition,omitempty"`
+	CombatTimeTrackingMode    string            `json:"combat_time_tracking_mode" validate:"required"`
+	TimeEscalationRules       string            `json:"time_escalation_rules,omitempty"`
+	InitiativeSystem          string            `json:"initiative_system" validate:"required"`
+	InitiativePersistence     string            `json:"initiative_persistence" validate:"required"`
+	InitiativeExpression      string            `json:"initiative_expression,omitempty"`
+	StaticInitiativeValue       string            `json:"static_initiative_value,omitempty"`
+	InitiativeModifiers         string            `json:"initiative_modifiers,omitempty"`
+	TieBreaking                 string            `json:"tie_breaking" validate:"required"`
+}
+
+// ToActionEconomyConfig converts the request DTO to ActionEconomyConfig for persistence.
+func (r SaveActionEconomyConfigRequest) ToActionEconomyConfig() ActionEconomyConfig {
+	return ActionEconomyConfig{
+		TurnStructure:             r.TurnStructure,
+		CustomTurnStructureName:   r.CustomTurnStructureName,
+		TokenTurn:                 r.TokenTurn,
+		SystemType:                r.SystemType,
+		PointPool:                 r.PointPool,
+		ActionSlots:               r.ActionSlots,
+		RoundTimeDefinition:       r.RoundTimeDefinition,
+		CustomRoundTimeDefinition: r.CustomRoundTimeDefinition,
+		CombatTimeTrackingMode:    r.CombatTimeTrackingMode,
+		TimeEscalationRules:       r.TimeEscalationRules,
+		InitiativeSystem:          r.InitiativeSystem,
+		InitiativePersistence:     r.InitiativePersistence,
+		InitiativeExpression:      r.InitiativeExpression,
+		StaticInitiativeValue:       r.StaticInitiativeValue,
+		InitiativeModifiers:         r.InitiativeModifiers,
+		TieBreaking:                 r.TieBreaking,
+	}
+}
 
 // DescriptiveMapEntry is one label/value pair for descriptive attributes.
 type DescriptiveMapEntry struct {

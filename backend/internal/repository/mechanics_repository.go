@@ -85,6 +85,25 @@ RETURNING ` + mechanicsColumns
 	return &row, nil
 }
 
+// UpsertActionEconomyConfig inserts or updates action_economy_config for a system.
+func (r *MechanicsRepository) UpsertActionEconomyConfig(systemID string, actionJSON json.RawMessage) (*models.SystemMechanics, error) {
+	if len(actionJSON) == 0 {
+		actionJSON = models.EmptyJSONObject()
+	}
+	var row models.SystemMechanics
+	q := `
+INSERT INTO system_mechanics (system_id, resolution_config, progression_config, action_economy_config)
+VALUES ($1, '{}', '{}', $2)
+ON CONFLICT (system_id) DO UPDATE
+  SET action_economy_config = EXCLUDED.action_economy_config
+RETURNING ` + mechanicsColumns
+	if err := r.db.Get(&row, q, systemID, actionJSON); err != nil {
+		return nil, err
+	}
+	normalizeMechanicsJSON(&row)
+	return &row, nil
+}
+
 // UpsertMechanics creates or updates mechanics for a system.
 func (r *MechanicsRepository) UpsertMechanics(_ *models.SystemMechanics) (*models.SystemMechanics, error) {
 	return nil, ErrNotFound

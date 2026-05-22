@@ -7,6 +7,7 @@ import type {
 	ListAttributesResponse,
 	ListResourcesResponse,
 	ListSkillsResponse,
+	ActionEconomyConfig,
 	MechanicsResponse,
 	ProgressionConfig,
 	ResolutionConfig,
@@ -118,6 +119,16 @@ export async function saveProgressionConfig(
 	body: ProgressionConfig
 ): Promise<MechanicsResponse> {
 	return apiEnvelope<MechanicsResponse>(`/api/systems/${systemId}/mechanics/progression`, {
+		method: 'PUT',
+		body: JSON.stringify(body)
+	});
+}
+
+export async function saveActionEconomyConfig(
+	systemId: string,
+	body: ActionEconomyConfig
+): Promise<MechanicsResponse> {
+	return apiEnvelope<MechanicsResponse>(`/api/systems/${systemId}/mechanics/action-economy`, {
 		method: 'PUT',
 		body: JSON.stringify(body)
 	});

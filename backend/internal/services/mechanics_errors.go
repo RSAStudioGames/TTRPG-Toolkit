@@ -26,6 +26,9 @@ var ErrInvalidProgression = errors.New("invalid progression config")
 // ErrInvalidResource indicates resource definition failed semantic validation.
 var ErrInvalidResource = errors.New("invalid resource")
 
+// ErrInvalidActionEconomy indicates action economy config failed semantic validation.
+var ErrInvalidActionEconomy = errors.New("invalid action economy config")
+
 // AttributeFormulaError is returned when an attribute formula fails parsing.
 type AttributeFormulaError struct {
 	Field  string

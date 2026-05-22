@@ -9,9 +9,14 @@
 	interface Props {
 		systemId: string;
 		disabled?: boolean;
+		onModalOpenChange?: (open: boolean) => void;
 	}
 
-	let { systemId, disabled = false }: Props = $props();
+	let { systemId, disabled = false, onModalOpenChange }: Props = $props();
+
+	export function closeModalDiscard() {
+		closeModal();
+	}
 
 	let resources = $state<ResourceResponse[]>([]);
 	let loading = $state(true);
@@ -61,6 +66,10 @@
 			error = e instanceof ApiError ? e.message : 'Failed to delete resource';
 		}
 	}
+
+	$effect(() => {
+		onModalOpenChange?.(modalOpen);
+	});
 
 	onMount(() => {
 		load();

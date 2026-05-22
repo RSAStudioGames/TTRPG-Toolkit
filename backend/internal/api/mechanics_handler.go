@@ -68,6 +68,8 @@ func (h *MechanicsHandler) mechanicsServiceError(c *fiber.Ctx, err error) error 
 		return WriteError(c, fiber.StatusBadRequest, err.Error(), []string{err.Error()})
 	case errors.Is(err, services.ErrInvalidResource):
 		return WriteError(c, fiber.StatusBadRequest, err.Error(), []string{err.Error()})
+	case errors.Is(err, services.ErrInvalidActionEconomy):
+		return WriteError(c, fiber.StatusBadRequest, err.Error(), []string{err.Error()})
 	default:
 		if msg := err.Error(); msg != "" {
 			return WriteError(c, fiber.StatusBadRequest, msg, []string{msg})
@@ -124,6 +126,24 @@ func (h *MechanicsHandler) SaveProgressionConfig(c *fiber.Ctx) error {
 		return WriteError(c, fiber.StatusBadRequest, "Validation failed", []string{"invalid paradigm"})
 	}
 	resp, err := h.svc.SaveProgressionConfig(c.Params("id"), req.ToProgressionConfig())
+	if err != nil {
+		return h.mechanicsServiceError(c, err)
+	}
+	return WriteSuccess(c, resp)
+}
+
+func (h *MechanicsHandler) SaveActionEconomyConfig(c *fiber.Ctx) error {
+	if h.svc == nil {
+		return WriteError(c, fiber.StatusInternalServerError, "Mechanics unavailable", nil)
+	}
+	var req models.SaveActionEconomyConfigRequest
+	if err := c.BodyParser(&req); err != nil {
+		return WriteError(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+	if errs := ValidateStruct(req); len(errs) > 0 {
+		return WriteError(c, fiber.StatusBadRequest, "Validation failed", errs)
+	}
+	resp, err := h.svc.SaveActionEconomyConfig(c.Params("id"), req.ToActionEconomyConfig())
 	if err != nil {
 		return h.mechanicsServiceError(c, err)
 	}

@@ -13,9 +13,14 @@
 	interface Props {
 		systemId: string;
 		disabled?: boolean;
+		onModalOpenChange?: (open: boolean) => void;
 	}
 
-	let { systemId, disabled = false }: Props = $props();
+	let { systemId, disabled = false, onModalOpenChange }: Props = $props();
+
+	export function closeModalDiscard() {
+		closeModal();
+	}
 
 	let attributes = $state<AttributeResponse[]>([]);
 	let loading = $state(true);
@@ -120,6 +125,10 @@
 			error = e instanceof ApiError ? e.message : 'Failed to delete attribute';
 		}
 	}
+
+	$effect(() => {
+		onModalOpenChange?.(modalOpen);
+	});
 
 	onMount(() => {
 		load();

@@ -67,13 +67,68 @@ export interface ProgressionConfig {
 	allow_undo: boolean;
 }
 
+export interface ActionCostEntry {
+	name: string;
+	cost: number;
+}
+
+export interface ActionComboEntry {
+	combo_name: string;
+	component_names: string[];
+}
+
+export interface PointPoolConfig {
+	points_per_pool: number;
+	refresh_scope: string;
+	action_cost_table?: ActionCostEntry[];
+}
+
+export interface ActionSlotEntry {
+	name: string;
+	allowance: number;
+	allowance_scope?: string;
+	carry_over: string;
+	convert_target?: string;
+	is_reaction: boolean;
+	reaction_trigger?: string;
+	is_free_action: boolean;
+	free_action_limits?: string;
+	interruption_rules?: string;
+	delay_ready_rules?: string;
+	combos?: ActionComboEntry[];
+}
+
+export interface TokenTurnConfig {
+	tokens_per_round: number;
+	refresh_on: string;
+}
+
+export interface ActionEconomyConfig {
+	turn_structure: string;
+	custom_turn_structure_name?: string;
+	token_turn?: TokenTurnConfig;
+	system_type: string;
+	point_pool?: PointPoolConfig;
+	action_slots?: ActionSlotEntry[];
+	round_time_definition: string;
+	custom_round_time_definition?: string;
+	combat_time_tracking_mode: string;
+	time_escalation_rules?: string;
+	initiative_system: string;
+	initiative_persistence: string;
+	initiative_expression: string;
+	static_initiative_value: string;
+	initiative_modifiers?: string;
+	tie_breaking: string;
+}
+
 /** GET /api/systems/{id}/mechanics success data */
 export interface MechanicsResponse {
 	id: string;
 	system_id: string;
 	resolution_config: ResolutionConfig;
 	progression_config: ProgressionConfig;
-	action_economy_config: Record<string, unknown>;
+	action_economy_config: ActionEconomyConfig;
 }
 
 export interface DescriptiveMapEntry {

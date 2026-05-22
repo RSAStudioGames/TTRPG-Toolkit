@@ -22,15 +22,26 @@
 	interface Props {
 		systemId: string;
 		disabled?: boolean;
+		onDirtyChange?: (dirty: boolean) => void;
 	}
 
-	let { systemId, disabled = false }: Props = $props();
+	let { systemId, disabled = false, onDirtyChange }: Props = $props();
 
 	let config = $state<ProgressionConfig>(defaultProgressionConfig());
 	let loading = $state(true);
 	let saving = $state(false);
 	let error = $state<string | null>(null);
 	let saveMessage = $state<string | null>(null);
+	let savedSnapshot = $state('');
+
+	function snapshot(): string {
+		syncConfigFromTables();
+		return JSON.stringify(config);
+	}
+
+	function markDirty() {
+		onDirtyChange?.(snapshot() !== savedSnapshot);
+	}
 
 	const showLevel = $derived(showLevelBasedBlock(config.paradigm));
 	const showPointBuy = $derived(showPointBuyBlock(config.paradigm));
@@ -70,6 +81,8 @@
 			const data = await getMechanics(systemId);
 			config = normalizeProgressionConfig(data.progression_config);
 			syncTablesFromConfig();
+			savedSnapshot = snapshot();
+			onDirtyChange?.(false);
 		} catch (e) {
 			error = e instanceof ApiError ? e.message : 'Failed to load progression settings';
 		} finally {
@@ -86,6 +99,8 @@
 			const data = await saveProgressionConfig(systemId, config);
 			config = normalizeProgressionConfig(data.progression_config);
 			syncTablesFromConfig();
+			savedSnapshot = snapshot();
+			onDirtyChange?.(false);
 			saveMessage = 'Progression settings saved.';
 		} catch (e) {
 			error = e instanceof ApiError ? e.message : 'Failed to save progression settings';
@@ -101,6 +116,11 @@
 	function addCostRow() {
 		costRows = [...costRows, { rating: 0, cost: 0 }];
 	}
+
+	$effect(() => {
+		if (loading) return;
+		markDirty();
+	});
 
 	onMount(() => {
 		load();
