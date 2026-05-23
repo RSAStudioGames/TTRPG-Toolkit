@@ -1,0 +1,39 @@
+---
+description: TTRPG Toolkit architecture, layout, and runtime constraints
+alwaysApply: true
+---
+
+# Architecture & Runtime
+
+- **Monorepo:** `frontend/` (SvelteKit) + `backend/` (Go Fiber). Atomic commits; separate execution.
+- **Production / local run:** Only the Go binary serves the app. **Never** `npm run dev` or `npm start` as the runtime entrypoint.
+- **Build:** `npm run build` → static assets → `go:embed` in `backend/ui/static` → `go build`. See `docs/development.md`.
+
+```
+TTRPG-Toolkit/
+├── frontend/src/lib/   # components, stores, utils, api, types
+├── frontend/src/routes/
+├── backend/cmd/        # main
+├── backend/internal/   # api, server, config, (services, repository, ws as added)
+├── backend/ui/static/  # embed target (generated)
+├── build/static/       # SvelteKit adapter output (generated)
+├── docs/
+└── .env                # backend config (from .env.example); not config.yaml
+```
+
+- **HTTP:** Fiber serves embedded SPA on `/`, API on `/api/*`. Frontend config only via `GET /api/config`.
+- **Docker:** Multi-stage Dockerfile (Node build → Go embed + compile → minimal runtime). Caddy proxies in Compose.
+
+## Fast local iteration (dev only)
+
+| Change | Command |
+|--------|---------|
+| UI only (ship parity) | `go generate ./backend/ui/...` then `go build -C backend -o ttrpg-toolkit ./cmd` |
+| Go/API only | `go build -C backend -o ttrpg-toolkit ./cmd` |
+| UI preview (HMR) | Go binary on `:8080` + `npm run dev` in `frontend/` (proxies `/api`; not production) |
+
+Skip `npm ci` unless `package-lock.json` changed.
+
+## Dependencies
+
+No new NPM/Go package for logic writable cleanly in &lt;20 lines of stdlib. Conventional Commits: `feat(scope): subject`.

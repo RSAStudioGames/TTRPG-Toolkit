@@ -1,0 +1,37 @@
+---
+description: Domain lexicon and file/component naming conventions
+alwaysApply: true
+---
+
+# Domain Lexicon (exact terms — no synonyms)
+
+| Use | Not |
+|-----|-----|
+| Campaign | Game, Adventure, Session |
+| Character | Toon, Avatar, PlayerUnit |
+| NPC | Mob, Actor, NonPlayer |
+| Enemy | Monster, Hostile, Foe |
+| Ability | Spell, Power, Skill (unless template defines) |
+| Template | Schema, Form, Blueprint |
+| Character Sheet | TemplateInstance, CharSheet, StatBlock |
+| Item Card | ItemInstance, LootEntry |
+| Ability Card | AbilityInstance, SpellInstance |
+| Sheet | Instance, FilledForm, Doc (generic filled template doc) |
+| Wiki | Lore, Codex (UI label: **Game Reference**) |
+
+# Component filenames (PascalCase.svelte)
+
+- Modals: `[Feature][Action]Modal.svelte` — e.g. `CampaignCreateModal.svelte`
+- Overlays: `[Feature]Overlay.svelte` / `[Feature]Drawer.svelte`
+- Menus: `[Feature]Menu.svelte`
+- Buttons: `[Action]Button.svelte` — e.g. `JoinGameButton.svelte`
+- Template editor: `TE_` prefix — e.g. `TE_Canvas.svelte`
+
+# Code style
+
+- **TS/Svelte:** `camelCase` vars/functions; `PascalCase` types/components.
+- **Go:** `camelCase` unexported; `PascalCase` exported.
+- **API JSON / DB:** `snake_case`.
+- **Routes:** kebab-case paths; **Go files:** `snake_case.go`.
+
+Check `$lib/components` before duplicating UI.

@@ -1,0 +1,59 @@
+---
+description: SvelteKit UI standards — state, copy, theming, API client
+globs: frontend/**/*
+alwaysApply: false
+---
+
+# Frontend (SvelteKit)
+
+## API & types
+
+- All HTTP via `$lib/api` (`api`, `apiEnvelope`). No raw `fetch` in routes.
+- Types in `$lib/types`; mirror backend envelope and `snake_case` JSON fields.
+
+## State
+
+- **`let`:** local UI only (open/closed, draft input).
+- **Stores:** cross-route/session data (`activeCampaignStore`, etc.). Do not keep shared API data only in one component.
+
+## UI copy (players/GMs, not engineers)
+
+- Errors: "Failed to load Campaign" — never stack traces or HTTP jargon.
+- Buttons: **Create** (not Add/New), **Delete** (not Remove), **Save** (not Update).
+- Paired stats: `Current / Max` (e.g. `25 / 30`).
+
+## Theming
+
+- Base: paper white bg, dark ink text.
+- **Player** accent: red (`--accent-player` / `--accent-primary` on player layouts).
+- **GM** accent: gold (`--accent-gm` / `--accent-primary` on GM layouts).
+- Set accents in role `+layout.svelte`; **never** hardcode accent hex in leaf components.
+
+## Reuse
+
+Extend `BaseModal`, tables, etc. with props/slots — do not copy markup.
+
+## Role dashboard sub-pages
+
+Routes **one segment** below a role dashboard are sub-pages. Role dashboards themselves never show a back control.
+
+| Role | Dashboard route | Dashboard `title` (parent name) | Sub-page pattern |
+|------|-----------------|----------------------------------|------------------|
+| GM | `/gm` | `Game Master Dashboard` | `/gm/<slug>` |
+| Player | `/player` | `Player Dashboard` | `/player/<slug>` |
+
+Sub-pages use `DashboardPage` and **must** wire `BackButton` in `headerActions` before `LogoutButton`:
+
+- `href`: parent dashboard route (`/gm` or `/player`) — use `goto`, never `history.back()`
+- `parentTitle`: exact `title` string from the parent dashboard page
+
+Example (`/gm/system-management`):
+
+```svelte
+{#snippet headerActions()}
+	<BackButton href="/gm" parentTitle="Game Master Dashboard" />
+	<LogoutButton />
+{/snippet}
+```
+
+Do not add `BackButton` on `/gm`, `/player`, or the landing page (`/`).

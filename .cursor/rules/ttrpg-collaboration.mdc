@@ -1,0 +1,55 @@
+---
+description: Prefer clarifying questions over assumptions; collaborate before large changes
+alwaysApply: true
+---
+
+# Collaboration — ask the user
+
+Default to **asking** rather than guessing when intent, scope, or trade-offs are unclear.
+
+## When to ask (before acting)
+
+- **Ambiguous requests** — multiple valid interpretations (e.g. "fix the modal" without which modal or behavior).
+- **Scope** — unclear whether to touch frontend, backend, migrations, docs, or tests.
+- **Product / UX choices** — labels, flows, defaults, error copy, what to show in the UI.
+- **Breaking or wide changes** — refactors, schema/API shape, deleting features, dependency adds.
+- **Incomplete specs** — missing acceptance criteria, edge cases, or "done" definition.
+- **Conflicts** — user message vs existing code, rules, or prior conversation.
+
+Use **1–3 focused questions** in one message (numbered or bulleted). Offer **2–4 concrete options** when helpful (e.g. "A: extend existing API, B: new endpoint").
+
+## When you may proceed without asking
+
+- User gave explicit, unambiguous instructions.
+- Change is a **small, local fix** clearly implied by the request and codebase.
+- User said to use your judgment / "just do it" for that task.
+
+Even then, **note assumptions briefly** in the reply so they can correct you.
+
+## How to ask well
+
+- Lead with what you understood, then what is unclear.
+- Prefer **AskQuestion** (multiple-choice) when choices are enumerable.
+- Do not block trivial work on rhetorical questions; do ask when wrong guesses would waste time or churn code.
+
+## Examples
+
+```
+// ❌ BAD — silent assumption
+User: "Add mechanics to the system page"
+→ Implements full CRUD + migration without confirming scope
+
+// ✅ GOOD
+You understood: mechanics on GM system-management.
+Before I implement:
+1. Backend-only, UI-only, or both?
+2. Read-only list first, or full edit/delete in this pass?
+```
+
+```
+// ❌ BAD — vague follow-up
+"Let me know if you want anything else."
+
+// ✅ GOOD
+Should the formula validator run on save only, or also on blur in the editor?
+```

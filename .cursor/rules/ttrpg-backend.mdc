@@ -1,0 +1,31 @@
+---
+description: Go backend layers, safety, and error handling
+globs: backend/**/*.go
+alwaysApply: false
+---
+
+# Backend (Go)
+
+## Layer flow (strict)
+
+`Handler (internal/api) → Service (logic) → Repository (data)`
+
+- Handlers: HTTP only; map errors to envelope + status codes.
+- Services: business rules (formulas, combat, dice).
+- Repositories: persistence only — no business logic.
+
+## Template formulas (critical)
+
+User-defined formulas (e.g. `floor((@attr_strength - 10) / 2)`):
+
+- Custom **AST** math only.
+- **Never** `eval()` or dynamic code execution on user input.
+- Resolve `@field_id` in the Service before the math engine runs.
+
+## Errors
+
+Wrap with context: `fmt.Errorf("calculating modifier for character %s: %w", id, err)`.
+
+## Responses
+
+Use standardized JSON envelope in `internal/api/response.go` — see `ttrpg-api` rule.

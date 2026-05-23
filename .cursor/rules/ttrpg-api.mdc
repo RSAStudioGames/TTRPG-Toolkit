@@ -1,0 +1,30 @@
+---
+description: REST/RPC API design, JSON envelope, WebSocket message shape
+globs: "{backend/internal/api/**,frontend/src/lib/api/**,frontend/src/lib/types/**}"
+alwaysApply: false
+---
+
+# API & Communication
+
+## Envelope (all responses)
+
+```json
+{
+  "status": "success" | "error",
+  "data": { },
+  "message": "Human readable message",
+  "errors": [ ]
+}
+```
+
+Frontend: unwrap with `apiEnvelope<T>()` from `$lib/api/client.ts`.
+
+## REST vs RPC
+
+- **REST:** CRUD for Campaigns, Characters, Items, Wiki, Templates.
+- **RPC-style actions:** e.g. `POST /api/campaigns/{id}/start-session`, `POST /api/dice/roll`, `POST /api/combat/{id}/next-turn`, `POST /api/character-sheets`, `POST /api/item-cards`.
+
+## WebSocket (when implemented)
+
+- One connection per client for chat, combat, dice.
+- JSON messages: `{ "type": "chat_message" | "combat_update" | ..., "payload": { } }`.
