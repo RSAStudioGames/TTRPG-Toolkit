@@ -5,7 +5,7 @@
 	import OpenSystemBuilderButton from '$lib/components/OpenSystemBuilderButton.svelte';
 </script>
 
-<DashboardPage title="Game Master Dashboard">
+<DashboardPage title="Game Master" role="gm" showRoleIcon>
 	{#snippet headerActions()}
 		<LogoutButton />
 	{/snippet}

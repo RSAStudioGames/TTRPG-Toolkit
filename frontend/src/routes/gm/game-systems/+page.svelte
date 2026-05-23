@@ -17,7 +17,7 @@
 	});
 </script>
 
-<DashboardPage title="Game Systems">
+<DashboardPage title="Game Systems" role="gm" contentLayout="stack">
 	{#snippet headerActions()}
 		<BackButton href="/gm/system-management" parentTitle="System Management" />
 		<LogoutButton />
@@ -64,12 +64,6 @@
 <SystemDetailOverlay bind:system={selected} onclose={() => (selected = null)} />
 
 <style>
-	:global(.dashboard .cards-row) {
-		display: block;
-		max-width: 720px;
-		width: 100%;
-	}
-
 	.btn-create {
 		padding: 0.5rem 1rem;
 		border: none;

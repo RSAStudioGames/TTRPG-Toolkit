@@ -5,7 +5,7 @@
 	import PlaceholderButton from '$lib/components/PlaceholderButton.svelte';
 </script>
 
-<DashboardPage title="Player Dashboard">
+<DashboardPage title="Player" role="player" showRoleIcon>
 	{#snippet headerActions()}
 		<LogoutButton />
 	{/snippet}

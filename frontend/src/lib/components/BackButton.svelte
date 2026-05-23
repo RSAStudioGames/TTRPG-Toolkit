@@ -19,13 +19,14 @@
 <motion.button
 	type="button"
 	class="back-button"
+	aria-label="Back to {parentTitle}"
 	whileHover={{ filter: 'brightness(0.97)' }}
 	whileTap={{ scale: 0.98 }}
 	transition={buttonTransition}
 	onclick={handleClick}
 >
 	<i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
-	Back to {parentTitle}
+	Back
 </motion.button>
 
 <style>

@@ -9,9 +9,9 @@
 	import SystemManagementCard from '$lib/components/SystemManagementCard.svelte';
 </script>
 
-<DashboardPage title="System Management">
+<DashboardPage title="System Management" role="gm">
 	{#snippet headerActions()}
-		<BackButton href="/gm" parentTitle="Game Master Dashboard" />
+		<BackButton href="/gm" parentTitle="Game Master" />
 		<LogoutButton />
 	{/snippet}
 
