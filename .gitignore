@@ -6,7 +6,7 @@
 backend/ui/static/
 
 # SvelteKit build output
-build/
+/build/
 
 # SvelteKit dev server cache
 frontend/.svelte-kit/
