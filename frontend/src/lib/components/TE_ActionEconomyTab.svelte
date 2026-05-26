@@ -36,19 +36,17 @@
 		systemId: string;
 		disabled?: boolean;
 		onDirtyChange?: (dirty: boolean) => void;
-		mode?: 'create' | 'edit';
-		isLastStep?: boolean;
-		onAdvance?: () => void;
 	}
 
-	let {
-		systemId,
-		disabled = false,
-		onDirtyChange,
-		mode = 'edit',
-		isLastStep = false,
-		onAdvance
-	}: Props = $props();
+	let { systemId, disabled = false, onDirtyChange }: Props = $props();
+
+	export async function save(): Promise<boolean> {
+		return await handleSave();
+	}
+
+	export function cancel(): void {
+		handleCancel();
+	}
 
 	let config = $state<ActionEconomyConfig>(defaultActionEconomyConfig());
 	let actionSlots = $state<ActionSlotEntry[]>([]);
@@ -143,7 +141,7 @@
 		}
 	}
 
-	async function handleSave() {
+	async function handleSave(): Promise<boolean> {
 		syncFromUi();
 		saving = true;
 		error = null;
@@ -160,9 +158,10 @@
 			savedSnapshot = snapshot();
 			onDirtyChange?.(false);
 			saveMessage = 'Action economy settings saved.';
-			if (mode === 'create') onAdvance?.();
+			return true;
 		} catch (e) {
 			error = e instanceof ApiError ? e.message : 'Failed to save action economy settings';
+			return false;
 		} finally {
 			saving = false;
 		}
@@ -190,10 +189,6 @@
 		saveMessage = null;
 		onDirtyChange?.(false);
 	}
-
-	const saveLabel = $derived(
-		mode === 'create' ? (isLastStep ? 'Save & Finish' : 'Save & Next') : 'Save Action Economy'
-	);
 
 	function addCostRow() {
 		costRows = [...costRows, { name: '', cost: 0 }];
@@ -727,19 +722,9 @@
 			<p class="status-msg success">{saveMessage}</p>
 		{/if}
 
-		<div class="tab-actions">
-			<button
-				type="button"
-				class="btn-secondary"
-				disabled={disabled || saving}
-				onclick={handleCancel}
-			>
-				Cancel
-			</button>
-			<button type="button" class="btn-primary" disabled={disabled || saving} onclick={handleSave}>
-				{saving ? 'Saving…' : saveLabel}
-			</button>
-		</div>
+		{#if saving}
+			<p class="status-msg">Saving…</p>
+		{/if}
 	{/if}
 </div>
 
@@ -903,36 +888,4 @@
 		margin: 0;
 	}
 
-	.tab-actions {
-		display: flex;
-		gap: 0.5rem;
-		margin-top: 0.5rem;
-	}
-
-	.btn-primary {
-		padding: 0.5rem 1rem;
-		border: none;
-		border-radius: 6px;
-		background: var(--accent-gm, #c9a227);
-		color: #1a1a1a;
-		font-weight: 600;
-		cursor: pointer;
-		font: inherit;
-	}
-
-	.btn-secondary {
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		background: #fff;
-		border: 1px solid #d1d5db;
-		font-weight: 600;
-		cursor: pointer;
-		font: inherit;
-	}
-
-	.btn-primary:disabled,
-	.btn-secondary:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
 </style>

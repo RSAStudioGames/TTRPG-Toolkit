@@ -80,6 +80,14 @@
 	let attributesTab = $state<{ closeModalDiscard: () => void } | undefined>();
 	let skillsTab = $state<{ closeModalDiscard: () => void } | undefined>();
 	let resourcesTab = $state<{ closeModalDiscard: () => void } | undefined>();
+	let resolutionTab = $state<{ save: () => Promise<boolean> } | undefined>();
+	let progressionTab = $state<{ save: () => Promise<boolean> } | undefined>();
+	let actionEconomyTab = $state<{ save: () => Promise<boolean> } | undefined>();
+
+	let footerBusy = $state(false);
+
+	const SETTINGS_TABS: OverlayTabId[] = ['resolution', 'progression', 'action_economy'];
+	const LIST_TABS: OverlayTabId[] = ['attributes', 'skills', 'resources'];
 
 	const mode = $derived<'create' | 'edit'>(system == null ? 'create' : 'edit');
 
@@ -169,6 +177,26 @@
 			activeTab = OVERLAY_TABS[idx + 1].id;
 		} else {
 			confirmClose();
+		}
+	}
+
+	const settingsSaveLabel = $derived.by(() => {
+		if (mode === 'edit') return 'Save';
+		return activeTab === lastTabId ? 'Save & Finish' : 'Save & Next';
+	});
+
+	const listNextLabel = $derived(activeTab === lastTabId ? 'Finish' : 'Next');
+
+	async function handleSettingsSave() {
+		footerBusy = true;
+		try {
+			let ok = false;
+			if (activeTab === 'resolution') ok = (await resolutionTab?.save()) ?? false;
+			else if (activeTab === 'progression') ok = (await progressionTab?.save()) ?? false;
+			else if (activeTab === 'action_economy') ok = (await actionEconomyTab?.save()) ?? false;
+			if (ok && mode === 'create') advanceTab();
+		} finally {
+			footerBusy = false;
 		}
 	}
 
@@ -441,25 +469,6 @@
 				{#if error}
 					<p class="form-error">{error}</p>
 				{/if}
-
-				<div class="identity-actions">
-					<button
-						type="button"
-						class="btn-secondary"
-						disabled={saving}
-						onclick={handleCancelIdentity}
-					>
-						Cancel
-					</button>
-					<button
-						type="button"
-						class="btn-primary"
-						disabled={saving}
-						onclick={handleNextIdentity}
-					>
-						{saving ? 'Creating…' : 'Next'}
-					</button>
-				</div>
 			{:else if system}
 				<SystemMetadataForm
 					bind:form
@@ -484,36 +493,13 @@
 				{#if error}
 					<p class="form-error">{error}</p>
 				{/if}
-
-				{#if !readOnly}
-					<div class="identity-actions">
-						<button
-							type="button"
-							class="btn-secondary"
-							disabled={saving}
-							onclick={handleCancelIdentity}
-						>
-							Cancel
-						</button>
-						<button
-							type="button"
-							class="btn-primary"
-							disabled={saving}
-							onclick={handleSaveIdentity}
-						>
-							{saving ? 'Saving…' : 'Save'}
-						</button>
-					</div>
-				{/if}
 			{/if}
 		{:else if system}
 			{#if activeTab === 'resolution'}
 				<TE_ResolutionTab
+					bind:this={resolutionTab}
 					systemId={system.id}
 					disabled={readOnly}
-					{mode}
-					isLastStep={lastTabId === 'resolution'}
-					onAdvance={advanceTab}
 					onDirtyChange={(d) => setTabDirty('resolution', d)}
 				/>
 			{:else if activeTab === 'attributes'}
@@ -521,9 +507,6 @@
 					bind:this={attributesTab}
 					systemId={system.id}
 					disabled={readOnly}
-					{mode}
-					isLastStep={lastTabId === 'attributes'}
-					onAdvance={advanceTab}
 					onModalOpenChange={(o) => {
 						modalOpenByTab = { ...modalOpenByTab, attributes: o };
 					}}
@@ -533,20 +516,15 @@
 					bind:this={skillsTab}
 					systemId={system.id}
 					disabled={readOnly}
-					{mode}
-					isLastStep={lastTabId === 'skills'}
-					onAdvance={advanceTab}
 					onModalOpenChange={(o) => {
 						modalOpenByTab = { ...modalOpenByTab, skills: o };
 					}}
 				/>
 			{:else if activeTab === 'progression'}
 				<TE_ProgressionTab
+					bind:this={progressionTab}
 					systemId={system.id}
 					disabled={readOnly}
-					{mode}
-					isLastStep={lastTabId === 'progression'}
-					onAdvance={advanceTab}
 					onDirtyChange={(d) => setTabDirty('progression', d)}
 				/>
 			{:else if activeTab === 'resources'}
@@ -554,20 +532,15 @@
 					bind:this={resourcesTab}
 					systemId={system.id}
 					disabled={readOnly}
-					{mode}
-					isLastStep={lastTabId === 'resources'}
-					onAdvance={advanceTab}
 					onModalOpenChange={(o) => {
 						modalOpenByTab = { ...modalOpenByTab, resources: o };
 					}}
 				/>
 			{:else if activeTab === 'action_economy'}
 				<TE_ActionEconomyTab
+					bind:this={actionEconomyTab}
 					systemId={system.id}
 					disabled={readOnly}
-					{mode}
-					isLastStep={lastTabId === 'action_economy'}
-					onAdvance={advanceTab}
 					onDirtyChange={(d) => setTabDirty('action_economy', d)}
 				/>
 			{/if}
@@ -575,19 +548,62 @@
 	</div>
 
 	{#snippet footer()}
-		{#if mode === 'edit'}
-			<button
-				type="button"
-				class="btn-danger"
-				disabled={deleteDisabled}
-				title={deleteDisabled ? 'Disable Deletion Protection to delete' : undefined}
-				onclick={() => {
-					if (!deleteDisabled) deleteOpen = true;
-				}}
-			>
-				Delete
+		<div class="footer-left">
+			{#if mode === 'edit'}
+				<button
+					type="button"
+					class="btn-danger"
+					disabled={deleteDisabled}
+					title={deleteDisabled ? 'Disable Deletion Protection to delete' : undefined}
+					onclick={() => {
+						if (!deleteDisabled) deleteOpen = true;
+					}}
+				>
+					Delete
+				</button>
+			{/if}
+		</div>
+		<div class="footer-right">
+			<button type="button" class="btn-secondary" disabled={footerBusy || saving} onclick={requestClose}>
+				Cancel
 			</button>
-		{/if}
+			{#if activeTab === 'identity'}
+				{#if mode === 'create'}
+					<button
+						type="button"
+						class="btn-primary"
+						disabled={saving}
+						onclick={handleNextIdentity}
+					>
+						{saving ? 'Creating…' : 'Next'}
+					</button>
+				{:else if !readOnly}
+					<button
+						type="button"
+						class="btn-primary"
+						disabled={saving}
+						onclick={handleSaveIdentity}
+					>
+						{saving ? 'Saving…' : 'Save'}
+					</button>
+				{/if}
+			{:else if SETTINGS_TABS.includes(activeTab)}
+				{#if !readOnly}
+					<button
+						type="button"
+						class="btn-primary"
+						disabled={footerBusy}
+						onclick={handleSettingsSave}
+					>
+						{footerBusy ? 'Saving…' : settingsSaveLabel}
+					</button>
+				{/if}
+			{:else if LIST_TABS.includes(activeTab) && mode === 'create'}
+				<button type="button" class="btn-primary" onclick={advanceTab}>
+					{listNextLabel}
+				</button>
+			{/if}
+		</div>
 	{/snippet}
 </BaseModal>
 
@@ -751,13 +767,17 @@
 		color: var(--text-muted, #6b7280);
 	}
 
-	.identity-actions {
+	.footer-left {
 		display: flex;
-		justify-content: flex-end;
+		align-items: center;
 		gap: 0.5rem;
-		margin-top: 1rem;
-		padding-top: 0.75rem;
-		border-top: 1px solid #e5e7eb;
+		margin-right: auto;
+	}
+
+	.footer-right {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
 	}
 
 	.btn-primary,

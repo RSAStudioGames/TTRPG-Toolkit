@@ -24,21 +24,9 @@
 		systemId: string;
 		disabled?: boolean;
 		onModalOpenChange?: (open: boolean) => void;
-		mode?: 'create' | 'edit';
-		isLastStep?: boolean;
-		onAdvance?: () => void;
 	}
 
-	let {
-		systemId,
-		disabled = false,
-		onModalOpenChange,
-		mode = 'edit',
-		isLastStep = false,
-		onAdvance
-	}: Props = $props();
-
-	const nextLabel = $derived(isLastStep ? 'Finish' : 'Next');
+	let { systemId, disabled = false, onModalOpenChange }: Props = $props();
 
 	export function closeModalDiscard() {
 		closeCoreModal();
@@ -370,13 +358,6 @@
 			</section>
 		{/if}
 
-		{#if mode === 'create'}
-			<div class="wizard-actions">
-				<button type="button" class="btn-primary" {disabled} onclick={() => onAdvance?.()}>
-					{nextLabel}
-				</button>
-			</div>
-		{/if}
 	{/if}
 </div>
 
@@ -527,15 +508,6 @@
 
 	.tab-footer {
 		margin-top: 0.25rem;
-	}
-
-	.wizard-actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: 0.5rem;
-		margin-top: 1rem;
-		padding-top: 0.75rem;
-		border-top: 1px solid #e5e7eb;
 	}
 
 	.btn-primary,
