@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import TE_TableEditor from './TE_TableEditor.svelte';
 	import { getMechanics, saveProgressionConfig } from '$lib/api/mechanics';
 	import { ApiError } from '$lib/api/client';
@@ -23,9 +22,19 @@
 		systemId: string;
 		disabled?: boolean;
 		onDirtyChange?: (dirty: boolean) => void;
+		mode?: 'create' | 'edit';
+		isLastStep?: boolean;
+		onAdvance?: () => void;
 	}
 
-	let { systemId, disabled = false, onDirtyChange }: Props = $props();
+	let {
+		systemId,
+		disabled = false,
+		onDirtyChange,
+		mode = 'edit',
+		isLastStep = false,
+		onAdvance
+	}: Props = $props();
 
 	let config = $state<ProgressionConfig>(defaultProgressionConfig());
 	let loading = $state(true);
@@ -102,12 +111,34 @@
 			savedSnapshot = snapshot();
 			onDirtyChange?.(false);
 			saveMessage = 'Progression settings saved.';
+			if (mode === 'create') onAdvance?.();
 		} catch (e) {
 			error = e instanceof ApiError ? e.message : 'Failed to save progression settings';
 		} finally {
 			saving = false;
 		}
 	}
+
+	function handleCancel() {
+		const isDirty = snapshot() !== savedSnapshot;
+		if (isDirty && !confirm('Discard changes on this tab?')) return;
+		if (savedSnapshot) {
+			try {
+				config = normalizeProgressionConfig(JSON.parse(savedSnapshot));
+				syncTablesFromConfig();
+			} catch {
+				config = defaultProgressionConfig();
+				syncTablesFromConfig();
+			}
+		}
+		error = null;
+		saveMessage = null;
+		onDirtyChange?.(false);
+	}
+
+	const saveLabel = $derived(
+		mode === 'create' ? (isLastStep ? 'Save & Finish' : 'Save & Next') : 'Save Progression'
+	);
 
 	function addXpRow() {
 		xpRows = [...xpRows, { level: xpRows.length + 1, xp_required: 0 }];
@@ -122,8 +153,8 @@
 		markDirty();
 	});
 
-	onMount(() => {
-		load();
+	$effect(() => {
+		if (systemId) load();
 	});
 </script>
 
@@ -244,8 +275,16 @@
 		{/if}
 
 		<div class="tab-actions">
+			<button
+				type="button"
+				class="btn-secondary"
+				disabled={disabled || saving}
+				onclick={handleCancel}
+			>
+				Cancel
+			</button>
 			<button type="button" class="btn-primary" disabled={disabled || saving} onclick={handleSave}>
-				{saving ? 'Saving…' : 'Save Progression'}
+				{saving ? 'Saving…' : saveLabel}
 			</button>
 		</div>
 	{/if}
@@ -330,6 +369,8 @@
 	}
 
 	.tab-actions {
+		display: flex;
+		gap: 0.5rem;
 		margin-top: 0.5rem;
 	}
 
@@ -344,7 +385,18 @@
 		font: inherit;
 	}
 
-	.btn-primary:disabled {
+	.btn-secondary {
+		padding: 0.5rem 1rem;
+		border-radius: 6px;
+		background: #fff;
+		border: 1px solid #d1d5db;
+		font-weight: 600;
+		cursor: pointer;
+		font: inherit;
+	}
+
+	.btn-primary:disabled,
+	.btn-secondary:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
 	}

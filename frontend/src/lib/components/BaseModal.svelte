@@ -7,6 +7,8 @@
 		onclose: () => void;
 		children: Snippet;
 		footer?: Snippet;
+		/** Optional snippet rendered inside the header, below the title row. Use for tabs/breadcrumbs. */
+		headerExtra?: Snippet;
 		wide?: boolean;
 		/** When false, clicking the dimmed backdrop does not close the modal. Default true. */
 		closeOnBackdrop?: boolean;
@@ -22,6 +24,7 @@
 		onclose,
 		children,
 		footer,
+		headerExtra,
 		wide = false,
 		closeOnBackdrop = true,
 		stacked = false,
@@ -57,8 +60,13 @@
 			aria-labelledby="modal-title"
 		>
 			<header class="modal-header">
-				<h2 id="modal-title">{title}</h2>
-				<button type="button" class="modal-close" aria-label="Close" onclick={onclose}>×</button>
+				<div class="modal-header-row">
+					<h2 id="modal-title">{title}</h2>
+					<button type="button" class="modal-close" aria-label="Close" onclick={onclose}>×</button>
+				</div>
+				{#if headerExtra}
+					{@render headerExtra()}
+				{/if}
 			</header>
 			<div class="modal-body">
 				{@render children()}
@@ -105,10 +113,17 @@
 
 	.modal-header {
 		display: flex;
-		align-items: center;
-		justify-content: space-between;
+		flex-direction: column;
+		gap: 0.5rem;
 		padding: 1rem 1.25rem;
 		border-bottom: 1px solid var(--accent-gm-muted);
+	}
+
+	.modal-header-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
 	}
 
 	.modal-header h2 {

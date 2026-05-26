@@ -4,17 +4,31 @@
 	import DashboardPage from '$lib/components/DashboardPage.svelte';
 	import LogoutButton from '$lib/components/LogoutButton.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
-	import SystemCreateModal from '$lib/components/SystemCreateModal.svelte';
-	import SystemDetailOverlay from '$lib/components/SystemDetailOverlay.svelte';
+	import SystemEditorModal from '$lib/components/SystemEditorModal.svelte';
 	import { loadSystems, systemsState } from '$lib/stores/systemsStore.svelte';
 	import type { GameSystem } from '$lib/types/system';
 
-	let createOpen = $state(false);
-	let selected = $state<GameSystem | null>(null);
+	let editorOpen = $state(false);
+	let editorTarget = $state<GameSystem | null>(null);
 
 	onMount(() => {
 		loadSystems();
 	});
+
+	function openCreate() {
+		editorTarget = null;
+		editorOpen = true;
+	}
+
+	function openEdit(sys: GameSystem) {
+		editorTarget = sys;
+		editorOpen = true;
+	}
+
+	function closeEditor() {
+		editorOpen = false;
+		editorTarget = null;
+	}
 </script>
 
 <DashboardPage title="Game Systems" role="gm" contentLayout="stack">
@@ -30,16 +44,16 @@
 	{:else if systemsState.systems.length === 0}
 		<div class="empty-state">
 			<p class="status-msg">No game systems yet. Create one to get started.</p>
-			<button type="button" class="btn-create" onclick={() => (createOpen = true)}>Create</button>
+			<button type="button" class="btn-create" onclick={openCreate}>Create</button>
 		</div>
 	{:else}
 		<div class="list-toolbar">
-			<button type="button" class="btn-create" onclick={() => (createOpen = true)}>Create</button>
+			<button type="button" class="btn-create" onclick={openCreate}>Create</button>
 		</div>
 		<ul class="systems-list">
 			{#each systemsState.systems as sys (sys.id)}
 				<li>
-					<button type="button" class="system-card" onclick={() => (selected = sys)}>
+					<button type="button" class="system-card" onclick={() => openEdit(sys)}>
 						<div class="card-top">
 							<strong>{sys.name}</strong>
 							<StatusBadge status={sys.status} />
@@ -55,13 +69,12 @@
 	{/if}
 </DashboardPage>
 
-<SystemCreateModal
-	open={createOpen}
-	onclose={() => (createOpen = false)}
+<SystemEditorModal
+	open={editorOpen}
+	initialSystem={editorTarget}
+	onclose={closeEditor}
 	onsaved={() => loadSystems()}
 />
-
-<SystemDetailOverlay bind:system={selected} onclose={() => (selected = null)} />
 
 <style>
 	.btn-create {

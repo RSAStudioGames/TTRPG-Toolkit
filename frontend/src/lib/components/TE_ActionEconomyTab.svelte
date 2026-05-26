@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import TE_FormulaBuilder from './TE_FormulaBuilder.svelte';
 	import TE_TableEditor from './TE_TableEditor.svelte';
 	import { getMechanics, saveActionEconomyConfig } from '$lib/api/mechanics';
@@ -37,9 +36,19 @@
 		systemId: string;
 		disabled?: boolean;
 		onDirtyChange?: (dirty: boolean) => void;
+		mode?: 'create' | 'edit';
+		isLastStep?: boolean;
+		onAdvance?: () => void;
 	}
 
-	let { systemId, disabled = false, onDirtyChange }: Props = $props();
+	let {
+		systemId,
+		disabled = false,
+		onDirtyChange,
+		mode = 'edit',
+		isLastStep = false,
+		onAdvance
+	}: Props = $props();
 
 	let config = $state<ActionEconomyConfig>(defaultActionEconomyConfig());
 	let actionSlots = $state<ActionSlotEntry[]>([]);
@@ -151,12 +160,40 @@
 			savedSnapshot = snapshot();
 			onDirtyChange?.(false);
 			saveMessage = 'Action economy settings saved.';
+			if (mode === 'create') onAdvance?.();
 		} catch (e) {
 			error = e instanceof ApiError ? e.message : 'Failed to save action economy settings';
 		} finally {
 			saving = false;
 		}
 	}
+
+	function handleCancel() {
+		const isDirty = snapshot() !== savedSnapshot;
+		if (isDirty && !confirm('Discard changes on this tab?')) return;
+		if (savedSnapshot) {
+			try {
+				const parsed = JSON.parse(savedSnapshot) as {
+					config: ActionEconomyConfig;
+					actionSlots: ActionSlotEntry[];
+				};
+				config = normalizeActionEconomyConfig(parsed.config);
+				actionSlots = (parsed.actionSlots ?? []).map((s) => normalizeActionSlot(s));
+				syncToUi();
+			} catch {
+				config = defaultActionEconomyConfig();
+				actionSlots = [];
+				syncToUi();
+			}
+		}
+		error = null;
+		saveMessage = null;
+		onDirtyChange?.(false);
+	}
+
+	const saveLabel = $derived(
+		mode === 'create' ? (isLastStep ? 'Save & Finish' : 'Save & Next') : 'Save Action Economy'
+	);
 
 	function addCostRow() {
 		costRows = [...costRows, { name: '', cost: 0 }];
@@ -210,8 +247,8 @@
 		markDirty();
 	});
 
-	onMount(() => {
-		load();
+	$effect(() => {
+		if (systemId) load();
 	});
 </script>
 
@@ -691,8 +728,16 @@
 		{/if}
 
 		<div class="tab-actions">
+			<button
+				type="button"
+				class="btn-secondary"
+				disabled={disabled || saving}
+				onclick={handleCancel}
+			>
+				Cancel
+			</button>
 			<button type="button" class="btn-primary" disabled={disabled || saving} onclick={handleSave}>
-				{saving ? 'Saving…' : 'Save Action Economy'}
+				{saving ? 'Saving…' : saveLabel}
 			</button>
 		</div>
 	{/if}
@@ -859,6 +904,8 @@
 	}
 
 	.tab-actions {
+		display: flex;
+		gap: 0.5rem;
 		margin-top: 0.5rem;
 	}
 
@@ -873,7 +920,18 @@
 		font: inherit;
 	}
 
-	.btn-primary:disabled {
+	.btn-secondary {
+		padding: 0.5rem 1rem;
+		border-radius: 6px;
+		background: #fff;
+		border: 1px solid #d1d5db;
+		font-weight: 600;
+		cursor: pointer;
+		font: inherit;
+	}
+
+	.btn-primary:disabled,
+	.btn-secondary:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
 	}

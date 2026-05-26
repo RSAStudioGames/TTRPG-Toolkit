@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import TE_FormulaBuilder from './TE_FormulaBuilder.svelte';
 	import TE_MechanicList from './TE_MechanicList.svelte';
 	import TE_ThresholdEditor from './TE_ThresholdEditor.svelte';
@@ -25,9 +24,22 @@
 		systemId: string;
 		disabled?: boolean;
 		onDirtyChange?: (dirty: boolean) => void;
+		/** 'create' shows Save & Next / Save & Finish; 'edit' shows Save. */
+		mode?: 'create' | 'edit';
+		/** When true and mode === 'create', the action button reads "Save & Finish" and closes the modal after save. */
+		isLastStep?: boolean;
+		/** Called after a successful save when mode === 'create'. Should advance to next tab or finish. */
+		onAdvance?: () => void;
 	}
 
-	let { systemId, disabled = false, onDirtyChange }: Props = $props();
+	let {
+		systemId,
+		disabled = false,
+		onDirtyChange,
+		mode = 'edit',
+		isLastStep = false,
+		onAdvance
+	}: Props = $props();
 
 	let config = $state<ResolutionConfig>(defaultResolutionConfig());
 	let loading = $state(true);
@@ -101,6 +113,7 @@
 			savedSnapshot = JSON.stringify(config);
 			onDirtyChange?.(false);
 			saveMessage = 'Resolution settings saved.';
+			if (mode === 'create') onAdvance?.();
 		} catch (e) {
 			if (e instanceof ApiError) {
 				error = e.message;
@@ -113,13 +126,33 @@
 		}
 	}
 
+	function handleCancel() {
+		const isDirty = JSON.stringify(config) !== savedSnapshot;
+		if (isDirty && !confirm('Discard changes on this tab?')) return;
+		if (savedSnapshot) {
+			try {
+				config = normalizeResolutionConfig(JSON.parse(savedSnapshot));
+			} catch {
+				config = defaultResolutionConfig();
+			}
+		}
+		error = null;
+		saveMessage = null;
+		validationErrors = [];
+		onDirtyChange?.(false);
+	}
+
+	const saveLabel = $derived(
+		mode === 'create' ? (isLastStep ? 'Save & Finish' : 'Save & Next') : 'Save Resolution'
+	);
+
 	$effect(() => {
 		if (loading) return;
 		markDirty();
 	});
 
-	onMount(() => {
-		load();
+	$effect(() => {
+		if (systemId) load();
 	});
 </script>
 
@@ -289,11 +322,19 @@
 		<div class="save-row">
 			<button
 				type="button"
+				class="btn-secondary"
+				disabled={disabled || saving}
+				onclick={handleCancel}
+			>
+				Cancel
+			</button>
+			<button
+				type="button"
 				class="btn-primary"
 				disabled={disabled || saving}
 				onclick={handleSave}
 			>
-				{saving ? 'Saving…' : 'Save Resolution'}
+				{saving ? 'Saving…' : saveLabel}
 			</button>
 		</div>
 	{/if}
@@ -416,12 +457,25 @@
 		cursor: pointer;
 	}
 
-	.btn-primary:disabled {
+	.btn-primary:disabled,
+	.btn-secondary:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
 	}
 
+	.btn-secondary {
+		padding: 0.5rem 1.25rem;
+		border-radius: 6px;
+		background: #fff;
+		border: 1px solid #d1d5db;
+		font-weight: 600;
+		font: inherit;
+		cursor: pointer;
+	}
+
 	.save-row {
+		display: flex;
+		gap: 0.5rem;
 		margin-top: 0.5rem;
 		padding-top: 0.75rem;
 		border-top: 1px solid #e5e7eb;

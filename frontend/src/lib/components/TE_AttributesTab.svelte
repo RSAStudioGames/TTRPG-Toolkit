@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import TE_AttributeGroupModal from './TE_AttributeGroupModal.svelte';
 	import TE_AttributeModal from './TE_AttributeModal.svelte';
 	import TE_DerivedAttributeModal from './TE_DerivedAttributeModal.svelte';
@@ -25,9 +24,21 @@
 		systemId: string;
 		disabled?: boolean;
 		onModalOpenChange?: (open: boolean) => void;
+		mode?: 'create' | 'edit';
+		isLastStep?: boolean;
+		onAdvance?: () => void;
 	}
 
-	let { systemId, disabled = false, onModalOpenChange }: Props = $props();
+	let {
+		systemId,
+		disabled = false,
+		onModalOpenChange,
+		mode = 'edit',
+		isLastStep = false,
+		onAdvance
+	}: Props = $props();
+
+	const nextLabel = $derived(isLastStep ? 'Finish' : 'Next');
 
 	export function closeModalDiscard() {
 		closeCoreModal();
@@ -298,8 +309,8 @@
 		onModalOpenChange?.(coreModalOpen || derivedModalOpen || groupModalOpen);
 	});
 
-	onMount(() => {
-		load();
+	$effect(() => {
+		if (systemId) load();
 	});
 </script>
 
@@ -357,6 +368,14 @@
 					</button>
 				</div>
 			</section>
+		{/if}
+
+		{#if mode === 'create'}
+			<div class="wizard-actions">
+				<button type="button" class="btn-primary" {disabled} onclick={() => onAdvance?.()}>
+					{nextLabel}
+				</button>
+			</div>
 		{/if}
 	{/if}
 </div>
@@ -508,6 +527,15 @@
 
 	.tab-footer {
 		margin-top: 0.25rem;
+	}
+
+	.wizard-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
+		margin-top: 1rem;
+		padding-top: 0.75rem;
+		border-top: 1px solid #e5e7eb;
 	}
 
 	.btn-primary,

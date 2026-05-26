@@ -1,0 +1,67 @@
+---
+description: Always end responses with a concise summary of modified and created files
+alwaysApply: true
+---
+
+# End-of-Turn Change Summary
+
+After making any file changes (edits, creations, deletions), end the response with a concise `SUMMARY` block listing each affected file by its **full workspace-relative path** (with the **filename + extension bolded**) and a **brief parenthetical note** describing the change.
+
+## Format
+
+```
+SUMMARY
+Modifications:
+- <path/to/>**<file.ext>** (<brief change note>)
+- <path/to/>**<file.ext>** (<brief change note>)
+
+Created Files:
+- <path/to/>**<file.ext>** (<brief purpose>)
+
+Deleted Files:
+- <path/to/>**<file.ext>** (<brief reason>)
+```
+
+## Rules
+
+- **Always include the `SUMMARY` header** when files were changed.
+- **Use workspace-relative paths** (e.g. `frontend/src/lib/components/Button.svelte`), not just basenames.
+- **Bold only the filename + extension** using markdown `**...**`. The directory portion stays unbolded. For files at the workspace root, bold the entire name.
+- **Add a short parenthetical note** after each entry — a few words on what changed or why. No full sentences, no language tags, no code blocks.
+- **Omit empty sections** — if nothing was created, drop `Created Files:` entirely. Same for `Modifications:` and `Deleted Files:`.
+- **Skip the summary entirely** when the turn made no file changes (pure Q&A, planning, or read-only exploration).
+- **Place the summary last**, after any explanation of the changes.
+
+## Examples
+
+```
+✅ GOOD — full paths, filename bolded, brief notes
+SUMMARY
+Modifications:
+- frontend/src/routes/**+page.svelte** (added click handler)
+- backend/internal/api/**handlers.go** (new GET /campaigns route)
+
+Created Files:
+- frontend/src/lib/components/**CampaignCreateModal.svelte** (new create-campaign modal)
+```
+
+```
+✅ GOOD — root-level file, entire name bolded
+SUMMARY
+Modifications:
+- **README.md** (added setup section)
+```
+
+```
+❌ BAD — nothing bolded
+SUMMARY
+Modifications:
+- frontend/src/routes/+page.svelte (added click handler)
+```
+
+```
+❌ BAD — full path bolded instead of just filename
+SUMMARY
+Modifications:
+- **frontend/src/routes/+page.svelte** (added click handler)
+```
