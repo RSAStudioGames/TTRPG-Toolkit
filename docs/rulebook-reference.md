@@ -61,6 +61,6 @@ See `.cursor/rules/ttrpg-naming.mdc` for the full lexicon and component patterns
 ## 7. Tooling
 
 - **Ship build:** `go generate ./backend/ui/...` then `go build -C backend -o ttrpg-toolkit ./cmd` (or `.\prep.ps1` when `tools/build` exists).
-- **UI dev (optional):** Go on `:8080` + `npm run dev` in `frontend/` (Vite proxies `/api`).
+- **UI HMR (optional):** `make dev` — rebuilds Go API + Vite in one terminal (`/api` proxied).
 - **Commits:** Conventional Commits (`feat(combat): add next-turn endpoint`).
 - **Deps:** No new package for &lt;20 lines of stdlib.

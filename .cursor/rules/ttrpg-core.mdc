@@ -6,7 +6,8 @@ alwaysApply: true
 # Architecture & Runtime
 
 - **Monorepo:** `frontend/` (SvelteKit) + `backend/` (Go Fiber). Atomic commits; separate execution.
-- **Production / local run:** Only the Go binary serves the app. **Never** `npm run dev` or `npm start` as the runtime entrypoint.
+- **Production / ship-parity run:** Only the Go binary serves the app. **Never** use Node as the production entrypoint.
+- **UI HMR preview (dev only):** `make dev` (rebuilds Go + Vite in one terminal; not ship-parity).
 - **Build:** `npm run build` → static assets → `go:embed` in `backend/ui/static` → `go build`. See `docs/development.md`.
 
 ```
@@ -30,7 +31,7 @@ TTRPG-Toolkit/
 |--------|---------|
 | UI only (ship parity) | `go generate ./backend/ui/...` then `go build -C backend -o ttrpg-toolkit ./cmd` |
 | Go/API only | `go build -C backend -o ttrpg-toolkit ./cmd` |
-| UI preview (HMR) | Go binary on `:8080` + `npm run dev` in `frontend/` (proxies `/api`; not production) |
+| UI preview (HMR) | `make dev` — rebuilds Go API + Vite in one terminal (proxies `/api`; not production) |
 
 Skip `npm ci` unless `package-lock.json` changed.
 

@@ -11,7 +11,9 @@ Browser → Caddy (:80) → Go Fiber (:8080) → embedded SvelteKit static + /ap
 
 ## Runtime
 
-No Node at runtime. No `npm run dev`.
+**Production / ship-parity:** only the Go binary. No Node HTTP server.
+
+**UI HMR preview (local only):** `make dev` rebuilds the Go API, starts it on `:8080`, and runs Vite in the same terminal (proxies `/api`). Open the Vite URL (usually `http://localhost:5173`). Ctrl+C stops both. Go source changes still need a restart (`make dev` again).
 
 ## Environment
 
@@ -34,6 +36,14 @@ Or `.\prep.ps1` / `./prep.sh`. This runs `npm ci`, compiles the frontend, embeds
 Restart the binary after rebuilding.
 
 Manual equivalent: `go generate ./backend/ui/...` then `go build -C backend -o ttrpg-toolkit ./cmd`.
+
+## Fast UI iteration
+
+```bash
+make dev
+```
+
+See [scripts/dev.sh](../scripts/dev.sh). For ship-parity UI checks (embedded static), use the prep tool above instead.
 
 ## Docker Compose
 
