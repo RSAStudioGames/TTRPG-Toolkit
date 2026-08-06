@@ -9,6 +9,8 @@ export default defineConfig({
 	// Optional: only used if you manually run `npm run dev` (not part of prep / production).
 	server: {
 		host: true,
+		port: 3030,
+		strictPort: true,
 		proxy: {
 			'/api': {
 				target: 'http://127.0.0.1:8080',
